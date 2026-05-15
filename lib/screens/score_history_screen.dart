@@ -2,16 +2,59 @@ import 'package:flutter/material.dart';
 import '../models/game_models.dart';
 import '../theme/app_theme.dart';
 
-class ScoreHistoryScreen extends StatelessWidget {
+class ScoreHistoryScreen extends StatefulWidget {
   final Game game;
 
   const ScoreHistoryScreen({super.key, required this.game});
 
   @override
+  State<ScoreHistoryScreen> createState() => _ScoreHistoryScreenState();
+}
+
+class _ScoreHistoryScreenState extends State<ScoreHistoryScreen> {
+  void _deleteScore(Player player, ScoreEntry score) {
+    if (widget.game.isFinished) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bu oyun bitmiştir, müdahale edilemez.')),
+      );
+      return;
+    }
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceDark,
+        title: const Text('İşlemi Sil', style: TextStyle(color: AppTheme.textPrimary)),
+        content: const Text(
+          'Bu skor girişini silmek istediğinize emin misiniz?',
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('İptal', style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                player.scores.removeWhere((s) => s.id == score.id);
+              });
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.dangerRed,
+            ),
+            child: const Text('Sil', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Tüm skorları topla ve zamana göre sırala
     final allScores = <MapEntry<Player, ScoreEntry>>[];
-    for (final player in game.allPlayers) {
+    for (final player in widget.game.allPlayers) {
       for (final score in player.scores) {
         allScores.add(MapEntry(player, score));
       }
@@ -67,12 +110,37 @@ class ScoreHistoryScreen extends StatelessWidget {
                 ],
               ),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: sortedRounds.length,
-              itemBuilder: (context, index) {
-                final round = sortedRounds[index];
-                final entries = roundGroups[round]!;
+          : Column(
+              children: [
+                // Kullanıcıya bilgi notu
+                if (!widget.game.isFinished)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    color: AppTheme.accentGold.withValues(alpha: 0.1),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: AppTheme.accentGold),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Silmek istediğiniz işlemin üstüne basılı tutun',
+                          style: TextStyle(
+                            color: AppTheme.accentGold,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: sortedRounds.length,
+                    itemBuilder: (context, index) {
+                      final round = sortedRounds[index];
+                      final entries = roundGroups[round]!;
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,46 +177,51 @@ class ScoreHistoryScreen extends StatelessWidget {
                 );
               },
             ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildScoreItem(Player player, ScoreEntry score) {
     final isPositive = score.effectivePoints > 0;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isPositive
-              ? AppTheme.dangerRed.withValues(alpha: 0.15)
-              : AppTheme.successGreen.withValues(alpha: 0.15),
+    return GestureDetector(
+      onLongPress: () => _deleteScore(player, score),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isPositive
+                ? AppTheme.dangerRed.withValues(alpha: 0.15)
+                : AppTheme.successGreen.withValues(alpha: 0.15),
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          // Oyuncu avatarı
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              gradient: AppTheme.goldGradient,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Center(
-              child: Text(
-                player.name.isNotEmpty
-                    ? player.name[0].toUpperCase()
-                    : '?',
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
+        child: Row(
+          children: [
+            // Oyuncu avatarı
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                gradient: AppTheme.goldGradient,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Text(
+                  player.name.isNotEmpty
+                      ? player.name[0].toUpperCase()
+                      : '?',
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ),
-          ),
           const SizedBox(width: 10),
           // Detaylar
           Expanded(
@@ -191,8 +264,64 @@ class ScoreHistoryScreen extends StatelessWidget {
                         ),
                       ),
                     ],
+                    if (score.isOkeyFinish) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF7E57C2).withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'x2 OKEY',
+                          style: TextStyle(
+                            color: Color(0xFF7E57C2),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (score.isCauserCiftli) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: AppTheme.warningOrange.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'x2 RAKİP ÇİFTLİ',
+                          style: TextStyle(
+                            color: AppTheme.warningOrange,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
+                if (score.causedByPlayerId != null)
+                  Builder(
+                    builder: (context) {
+                      final causedBy = widget.game.allPlayers
+                          .where((p) => p.id == score.causedByPlayerId)
+                          .firstOrNull;
+                      if (causedBy == null) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          '⚔️ Alan: ${causedBy.name}',
+                          style: const TextStyle(
+                            color: AppTheme.warningOrange,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
               ],
             ),
           ),
@@ -219,6 +348,7 @@ class ScoreHistoryScreen extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }

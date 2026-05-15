@@ -7,6 +7,7 @@ import '../widgets/team_score_bar.dart';
 import '../widgets/score_input_dialog.dart';
 import 'score_history_screen.dart';
 import 'stats_screen.dart';
+import '../services/settings_service.dart';
 
 class GameScreen extends StatefulWidget {
   final Game game;
@@ -30,11 +31,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
-    _pulseAnimation =
-        Tween<double>(begin: 0.95, end: 1.05).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
+    _pulseAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -48,11 +47,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _openScoreDialog(Player player) async {
+    if (_game.isFinished) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bu oyun bitmiştir, müdahale edilemez.')));
+      return;
+    }
+    AudioVibrationService.playClickSound();
+    AudioVibrationService.vibrate();
     final result = await showDialog<ScoreEntry>(
       context: context,
       builder: (context) => ScoreInputDialog(
         player: player,
         currentRound: _game.currentRound,
+        allPlayers: _game.allPlayers,
       ),
     );
 
@@ -65,7 +71,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   void _undoLastScore(Player player) {
+    if (_game.isFinished) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bu oyun bitmiştir, müdahale edilemez.')));
+      return;
+    }
     if (player.scores.isEmpty) return;
+    AudioVibrationService.playClickSound();
+    AudioVibrationService.vibrateHeavy();
 
     showDialog(
       context: context,
@@ -83,8 +95,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('İptal',
-                style: TextStyle(color: AppTheme.textSecondary)),
+            child: const Text(
+              'İptal',
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -104,9 +118,25 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
+  void _toggleCiftli(Player player) {
+    if (_game.isFinished) return;
+    AudioVibrationService.playClickSound();
+    AudioVibrationService.vibrate();
+    setState(() {
+      player.isCiftliGidiyor = !player.isCiftliGidiyor;
+    });
+    _saveGame();
+  }
+
   void _nextRound() {
+    if (_game.isFinished) return;
+    AudioVibrationService.playClickSound();
+    AudioVibrationService.vibrateHeavy();
     setState(() {
       _game.currentRound++;
+      for (final p in _game.allPlayers) {
+        p.isCiftliGidiyor = false;
+      }
     });
     _saveGame();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -123,6 +153,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   void _endGame() {
+    if (_game.isFinished) return;
+    AudioVibrationService.playClickSound();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -139,8 +171,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('İptal',
-                style: TextStyle(color: AppTheme.textSecondary)),
+            child: const Text(
+              'İptal',
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -181,6 +215,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             // Oyun masası
             Expanded(child: _buildGameTable()),
 
+            // Reklam alanı
+            Container(
+              height: 50,
+              width: double.infinity,
+              color: Colors.transparent,
+            ),
+
             // Alt bar
             _buildBottomBar(),
           ],
@@ -195,8 +236,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new,
-                color: AppTheme.textPrimary, size: 20),
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: AppTheme.textPrimary,
+              size: 20,
+            ),
             onPressed: () => Navigator.pop(context),
           ),
           Expanded(
@@ -222,15 +266,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             ),
           ),
           PopupMenuButton<String>(
-            icon:
-                const Icon(Icons.more_vert, color: AppTheme.textPrimary),
+            icon: const Icon(Icons.more_vert, color: AppTheme.textPrimary),
             color: AppTheme.surfaceDark,
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14)),
+              borderRadius: BorderRadius.circular(14),
+            ),
             itemBuilder: (context) => [
               _popupItem('history', Icons.history, 'Skor Geçmişi'),
               _popupItem('stats', Icons.analytics, 'İstatistikler'),
-              _popupItem('end', Icons.flag, 'Oyunu Bitir'),
+              if (!_game.isFinished)
+                _popupItem('end', Icons.flag, 'Oyunu Bitir'),
             ],
             onSelected: (value) {
               switch (value) {
@@ -238,8 +283,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          ScoreHistoryScreen(game: _game),
+                      builder: (context) => ScoreHistoryScreen(game: _game),
                     ),
                   );
                   break;
@@ -262,16 +306,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
-  PopupMenuItem<String> _popupItem(
-      String value, IconData icon, String label) {
+  PopupMenuItem<String> _popupItem(String value, IconData icon, String label) {
     return PopupMenuItem(
       value: value,
       child: Row(
         children: [
           Icon(icon, color: AppTheme.textSecondary, size: 20),
           const SizedBox(width: 10),
-          Text(label,
-              style: const TextStyle(color: AppTheme.textPrimary)),
+          Text(label, style: const TextStyle(color: AppTheme.textPrimary)),
         ],
       ),
     );
@@ -280,145 +322,131 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Widget _buildGameTable() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Masa boyutunu hesapla
-        final tableSize = constraints.maxWidth < constraints.maxHeight
-            ? constraints.maxWidth * 0.42
-            : constraints.maxHeight * 0.35;
+        // Tüm oyuncuların yeşil masaya tam olarak eşit uzaklıkta olmasını sağlamak
+        // ve taşmaları önlemek için Column/Row ve FittedBox tabanlı bir düzen kullanıyoruz.
+        final tableSize = constraints.maxWidth * 0.42;
+        const double gap = 12.0;
 
         return Center(
-          child: SizedBox(
-            width: constraints.maxWidth,
-            height: constraints.maxHeight,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Masa (ortadaki yeşil alan)
-                AnimatedBuilder(
-                  animation: _pulseAnimation,
-                  builder: (context, child) {
-                    return Container(
-                      width: tableSize,
-                      height: tableSize,
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.tableGradient,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: AppTheme.accentGold.withValues(alpha: 0.3),
-                          width: 2,
+          child: FittedBox(
+            fit: BoxFit.contain,
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Üst oyuncu (seat 0) - Takım 1 Oyuncu 1
+                  GestureDetector(
+                    onLongPress: () => _undoLastScore(_game.team1.player1),
+                    child: PlayerCard(
+                      player: _game.team1.player1,
+                      team: _game.team1,
+                      position: 0,
+                      nickname: _game.team1.player1.getNickname(_game.allPlayers, _game.currentRound),
+                      onTap: () => _openScoreDialog(_game.team1.player1),
+                      onToggleCiftli: () => _toggleCiftli(_game.team1.player1),
+                    ),
+                  ),
+
+                  const SizedBox(height: gap),
+
+                  // Orta Satır (Sol Oyuncu - Masa - Sağ Oyuncu)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Sol oyuncu (seat 3) - Takım 2 Oyuncu 2
+                      GestureDetector(
+                        onLongPress: () => _undoLastScore(_game.team2.player2),
+                        child: PlayerCard(
+                          player: _game.team2.player2,
+                          team: _game.team2,
+                          position: 3,
+                          nickname: _game.team2.player2.getNickname(_game.allPlayers, _game.currentRound),
+                          onTap: () => _openScoreDialog(_game.team2.player2),
+                          onToggleCiftli: () => _toggleCiftli(_game.team2.player2),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                AppTheme.primaryGreen.withValues(alpha: 0.3),
-                            blurRadius: 24,
-                            spreadRadius: 4,
-                          ),
-                        ],
                       ),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              '🎴',
-                              style: TextStyle(fontSize: 32),
+
+                      const SizedBox(width: gap),
+
+                      // Masa (ortadaki yeşil alan)
+                      AnimatedBuilder(
+                        animation: _pulseAnimation,
+                        builder: (context, child) {
+                          return Container(
+                            width: tableSize,
+                            height: tableSize,
+                            decoration: BoxDecoration(
+                              gradient: AppTheme.tableGradient,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: AppTheme.accentGold.withValues(alpha: 0.3),
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.primaryGreen.withValues(alpha: 0.3),
+                                  blurRadius: 24,
+                                  spreadRadius: 4,
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'El ${_game.currentRound}',
-                              style: TextStyle(
-                                color: AppTheme.textPrimary.withValues(alpha: 0.7),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('🎴', style: TextStyle(fontSize: 32)),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'El ${_game.currentRound}',
+                                    style: TextStyle(
+                                      color: AppTheme.textPrimary.withValues(
+                                        alpha: 0.7,
+                                      ),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
+                          );
+                        },
+                      ),
+
+                      const SizedBox(width: gap),
+
+                      // Sağ oyuncu (seat 1) - Takım 2 Oyuncu 1
+                      GestureDetector(
+                        onLongPress: () => _undoLastScore(_game.team2.player1),
+                        child: PlayerCard(
+                          player: _game.team2.player1,
+                          team: _game.team2,
+                          position: 1,
+                          nickname: _game.team2.player1.getNickname(_game.allPlayers, _game.currentRound),
+                          onTap: () => _openScoreDialog(_game.team2.player1),
+                          onToggleCiftli: () => _toggleCiftli(_game.team2.player1),
                         ),
                       ),
-                    );
-                  },
-                ),
+                    ],
+                  ),
 
-                // Üst oyuncu (seat 0) - Takım 1 Oyuncu 1
-                Positioned(
-                  top: 4,
-                  left: constraints.maxWidth * 0.15,
-                  right: constraints.maxWidth * 0.15,
-                  child: Center(
-                    child: GestureDetector(
-                      onLongPress: () =>
-                          _undoLastScore(_game.team1.player1),
-                      child: PlayerCard(
-                        player: _game.team1.player1,
-                        team: _game.team1,
-                        position: 0,
-                        onTap: () =>
-                            _openScoreDialog(_game.team1.player1),
-                      ),
+                  const SizedBox(height: gap),
+
+                  // Alt oyuncu (seat 2) - Takım 1 Oyuncu 2
+                  GestureDetector(
+                    onLongPress: () => _undoLastScore(_game.team1.player2),
+                    child: PlayerCard(
+                      player: _game.team1.player2,
+                      team: _game.team1,
+                      position: 2,
+                      nickname: _game.team1.player2.getNickname(_game.allPlayers, _game.currentRound),
+                      onTap: () => _openScoreDialog(_game.team1.player2),
+                      onToggleCiftli: () => _toggleCiftli(_game.team1.player2),
                     ),
                   ),
-                ),
-
-                // Sağ oyuncu (seat 1) - Takım 2 Oyuncu 1
-                Positioned(
-                  right: 4,
-                  top: constraints.maxHeight * 0.25,
-                  bottom: constraints.maxHeight * 0.25,
-                  child: Center(
-                    child: GestureDetector(
-                      onLongPress: () =>
-                          _undoLastScore(_game.team2.player1),
-                      child: PlayerCard(
-                        player: _game.team2.player1,
-                        team: _game.team2,
-                        position: 1,
-                        onTap: () =>
-                            _openScoreDialog(_game.team2.player1),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Alt oyuncu (seat 2) - Takım 1 Oyuncu 2
-                Positioned(
-                  bottom: 4,
-                  left: constraints.maxWidth * 0.15,
-                  right: constraints.maxWidth * 0.15,
-                  child: Center(
-                    child: GestureDetector(
-                      onLongPress: () =>
-                          _undoLastScore(_game.team1.player2),
-                      child: PlayerCard(
-                        player: _game.team1.player2,
-                        team: _game.team1,
-                        position: 2,
-                        onTap: () =>
-                            _openScoreDialog(_game.team1.player2),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Sol oyuncu (seat 3) - Takım 2 Oyuncu 2
-                Positioned(
-                  left: 4,
-                  top: constraints.maxHeight * 0.25,
-                  bottom: constraints.maxHeight * 0.25,
-                  child: Center(
-                    child: GestureDetector(
-                      onLongPress: () =>
-                          _undoLastScore(_game.team2.player2),
-                      child: PlayerCard(
-                        player: _game.team2.player2,
-                        team: _game.team2,
-                        position: 3,
-                        onTap: () =>
-                            _openScoreDialog(_game.team2.player2),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -448,26 +476,26 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               ),
             ),
           ),
-          _bottomButton(
-            icon: Icons.skip_next_rounded,
-            label: 'Sonraki El',
-            onTap: _nextRound,
-            isPrimary: true,
-          ),
-          _bottomButton(
-            icon: Icons.flag_rounded,
-            label: 'Bitir',
-            onTap: _endGame,
-            isDanger: true,
-          ),
+          if (!_game.isFinished) ...[
+            _bottomButton(
+              icon: Icons.skip_next_rounded,
+              label: 'Sonraki El',
+              onTap: _nextRound,
+              isPrimary: true,
+            ),
+            _bottomButton(
+              icon: Icons.flag_rounded,
+              label: 'Bitir',
+              onTap: _endGame,
+              isDanger: true,
+            ),
+          ],
           _bottomButton(
             icon: Icons.analytics_outlined,
             label: 'İstatistik',
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => StatsScreen(game: _game),
-              ),
+              MaterialPageRoute(builder: (context) => StatsScreen(game: _game)),
             ),
           ),
         ],
@@ -499,14 +527,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 ],
               )
             : isDanger
-                ? BoxDecoration(
-                    color: AppTheme.dangerRed.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppTheme.dangerRed.withValues(alpha: 0.3),
-                    ),
-                  )
-                : null,
+            ? BoxDecoration(
+                color: AppTheme.dangerRed.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.dangerRed.withValues(alpha: 0.3),
+                ),
+              )
+            : null,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -515,8 +543,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               color: isPrimary
                   ? Colors.black
                   : isDanger
-                      ? AppTheme.dangerRed
-                      : AppTheme.textSecondary,
+                  ? AppTheme.dangerRed
+                  : AppTheme.textSecondary,
               size: 22,
             ),
             const SizedBox(height: 2),
@@ -526,8 +554,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 color: isPrimary
                     ? Colors.black
                     : isDanger
-                        ? AppTheme.dangerRed
-                        : AppTheme.textMuted,
+                    ? AppTheme.dangerRed
+                    : AppTheme.textMuted,
                 fontSize: 10,
                 fontWeight: isPrimary || isDanger
                     ? FontWeight.w700

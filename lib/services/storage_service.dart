@@ -30,7 +30,9 @@ class StorageService {
     }
 
     await prefs.setString(
-        _gamesKey, jsonEncode(games.map((g) => g.toJson()).toList()));
+      _gamesKey,
+      jsonEncode(games.map((g) => g.toJson()).toList()),
+    );
   }
 
   /// Aktif oyunu kaydet (auto-save)
@@ -60,7 +62,9 @@ class StorageService {
     final games = await getSavedGames();
     games.removeWhere((g) => g.id == gameId);
     await prefs.setString(
-        _gamesKey, jsonEncode(games.map((g) => g.toJson()).toList()));
+      _gamesKey,
+      jsonEncode(games.map((g) => g.toJson()).toList()),
+    );
 
     // Silinen oyun aktif oyun ise, aktif oyunu da temizle
     final activeGame = await getActiveGame();

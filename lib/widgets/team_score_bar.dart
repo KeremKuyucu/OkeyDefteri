@@ -38,22 +38,38 @@ class TeamScoreBar extends StatelessWidget {
           Expanded(
             child: _buildTeamInfo(team1, team1Leading, true),
           ),
-          // VS
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              gradient: AppTheme.goldGradient,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Text(
-              'VS',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1,
+          // Ortadaki alan (VS ve Fark)
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.goldGradient,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text(
+                  'VS',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1,
+                  ),
+                ),
               ),
-            ),
+              if ((team1.totalScore - team2.totalScore).abs() > 0) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Fark: ${(team1.totalScore - team2.totalScore).abs()}',
+                  style: const TextStyle(
+                    color: AppTheme.accentGold,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ],
           ),
           // Takım 2
           Expanded(

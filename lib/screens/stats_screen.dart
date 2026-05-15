@@ -63,6 +63,7 @@ class StatsScreen extends StatelessWidget {
             _buildSectionTitle('Hata Analizi'),
             const SizedBox(height: 8),
             _buildErrorAnalysis(),
+
           ],
         ),
       ),
@@ -182,7 +183,7 @@ class StatsScreen extends StatelessWidget {
   }
 
   Widget _buildPlayerRankCard(int rank, Player player) {
-    final medals = ['🥇', '🥈', '🥉', '4️⃣'];
+    final medals = ['🥇', '🥈', '🥉', '💃'];
     final isFirst = rank == 0;
 
     return Container(
@@ -333,31 +334,63 @@ class StatsScreen extends StatelessWidget {
               final count = player.scores
                   .where((s) => s.type == type)
                   .length;
+
+              final causerCounts = <String, int>{};
+              if (type.hasCausedBy) {
+                for (final score in player.scores.where((s) => s.type == type)) {
+                  if (score.causedByPlayerId != null) {
+                    try {
+                      final causer = game.allPlayers.firstWhere((p) => p.id == score.causedByPlayerId);
+                      if (causer.id != player.id) {
+                        causerCounts[causer.name] = (causerCounts[causer.name] ?? 0) + 1;
+                      }
+                    } catch (_) {}
+                  }
+                }
+              }
+
               return Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${type.emoji} ',
-                        style: const TextStyle(fontSize: 14)),
-                    Expanded(
-                      child: Text(
-                        '${type.label} (×$count)',
-                        style: const TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 13,
+                    Row(
+                      children: [
+                        Text('${type.emoji} ',
+                            style: const TextStyle(fontSize: 14)),
+                        Expanded(
+                          child: Text(
+                            '${type.label} (×$count)',
+                            style: const TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '${total > 0 ? "+" : ""}$total',
+                          style: TextStyle(
+                            color: total > 0
+                                ? AppTheme.dangerRed
+                                : AppTheme.successGreen,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (causerCounts.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 24, top: 2),
+                        child: Text(
+                          causerCounts.entries.map((c) => '${c.key}: ${c.value}x').join(' • '),
+                          style: const TextStyle(
+                            color: AppTheme.textMuted,
+                            fontSize: 11,
+                            fontStyle: FontStyle.italic,
+                          ),
                         ),
                       ),
-                    ),
-                    Text(
-                      '${total > 0 ? "+" : ""}$total',
-                      style: TextStyle(
-                        color: total > 0
-                            ? AppTheme.dangerRed
-                            : AppTheme.successGreen,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
                   ],
                 ),
               );
@@ -492,4 +525,5 @@ class StatsScreen extends StatelessWidget {
       ),
     );
   }
+
 }

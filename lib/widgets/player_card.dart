@@ -7,7 +7,9 @@ class PlayerCard extends StatelessWidget {
   final Team team;
   final int position; // 0: üst, 1: sağ, 2: alt, 3: sol
   final VoidCallback onTap;
+  final VoidCallback? onToggleCiftli;
   final bool isHighlighted;
+  final String? nickname;
 
   const PlayerCard({
     super.key,
@@ -15,7 +17,9 @@ class PlayerCard extends StatelessWidget {
     required this.team,
     required this.position,
     required this.onTap,
+    this.onToggleCiftli,
     this.isHighlighted = false,
+    this.nickname,
   });
 
   @override
@@ -65,10 +69,11 @@ class PlayerCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    team.name,
-                    style: const TextStyle(
-                      color: AppTheme.textMuted,
+                    nickname ?? team.name,
+                    style: TextStyle(
+                      color: nickname != null ? AppTheme.accentGold : AppTheme.textMuted,
                       fontSize: 10,
+                      fontWeight: nickname != null ? FontWeight.w600 : FontWeight.normal,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -104,13 +109,15 @@ class PlayerCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        // Mini istatistik
+        // Mini istatistik + çiftli toggle
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             _miniStat('🏆', '${player.winCount}'),
             const SizedBox(width: 6),
             _miniStat('⚠️', '${player.penaltyCount}'),
+            const SizedBox(width: 6),
+            _buildCiftliToggle(),
           ],
         ),
       ],
@@ -134,6 +141,20 @@ class PlayerCard extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
         ),
+        if (nickname != null) ...[
+          const SizedBox(height: 1),
+          Text(
+            nickname!,
+            style: const TextStyle(
+              color: AppTheme.accentGold,
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+          ),
+        ],
         const SizedBox(height: 4),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -165,6 +186,8 @@ class PlayerCard extends StatelessWidget {
             _miniStat('🏆', '${player.winCount}'),
             const SizedBox(width: 4),
             _miniStat('⚠️', '${player.penaltyCount}'),
+            const SizedBox(width: 4),
+            _buildCiftliToggle(small: true),
           ],
         ),
       ],
@@ -207,6 +230,39 @@ class PlayerCard extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCiftliToggle({bool small = false}) {
+    final isActive = player.isCiftliGidiyor;
+    return GestureDetector(
+      onTap: onToggleCiftli,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: small ? 4 : 6,
+          vertical: small ? 1 : 2,
+        ),
+        decoration: BoxDecoration(
+          color: isActive
+              ? AppTheme.accentGold.withValues(alpha: 0.25)
+              : AppTheme.surfaceCardLight.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: isActive
+                ? AppTheme.accentGold.withValues(alpha: 0.6)
+                : AppTheme.textMuted.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Text(
+          '×2',
+          style: TextStyle(
+            color: isActive ? AppTheme.accentGold : AppTheme.textMuted,
+            fontSize: small ? 9 : 10,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
     );
   }
 }

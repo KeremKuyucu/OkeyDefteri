@@ -5,6 +5,8 @@ import '../models/game_models.dart';
 import 'new_game_screen.dart';
 import 'past_games_screen.dart';
 import 'game_screen.dart';
+import '../widgets/developer_info.dart';
+import '../services/settings_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -67,6 +69,103 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
+  void _showSettings() async {
+    bool isVibrationEnabled = await SettingsService.getVibrationEnabled();
+    bool isSoundEnabled = await SettingsService.getSoundEnabled();
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surfaceDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setBottomSheetState) {
+          return Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ayarlar',
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ListTile(
+                  leading: const Icon(
+                    Icons.vibration,
+                    color: AppTheme.accentGold,
+                  ),
+                  title: const Text(
+                    'Titreşim',
+                    style: TextStyle(color: AppTheme.textPrimary),
+                  ),
+                  trailing: Switch(
+                    value: isVibrationEnabled,
+                    onChanged: (v) async {
+                      await SettingsService.setVibrationEnabled(v);
+                      setBottomSheetState(() {
+                        isVibrationEnabled = v;
+                      });
+                      if (v) {
+                        AudioVibrationService.vibrate();
+                      }
+                    },
+                    activeThumbColor: AppTheme.accentGold,
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.volume_up,
+                    color: AppTheme.accentGold,
+                  ),
+                  title: const Text(
+                    'Ses Efektleri',
+                    style: TextStyle(color: AppTheme.textPrimary),
+                  ),
+                  trailing: Switch(
+                    value: isSoundEnabled,
+                    onChanged: (v) async {
+                      await SettingsService.setSoundEnabled(v);
+                      setBottomSheetState(() {
+                        isSoundEnabled = v;
+                      });
+                      if (v) {
+                        AudioVibrationService.playClickSound();
+                      }
+                    },
+                    activeThumbColor: AppTheme.accentGold,
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.info_outline,
+                    color: AppTheme.accentGold,
+                  ),
+                  title: const Text(
+                    'Uygulama Hakkında',
+                    style: TextStyle(color: AppTheme.textPrimary),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    DeveloperInfo.show(context);
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -76,63 +175,83 @@ class _HomeScreenState extends State<HomeScreen>
           opacity: _fadeAnim,
           child: ScaleTransition(
             scale: _scaleAnim,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                children: [
-                  const SizedBox(height: 40),
+            child: Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 40),
 
-                  // Logo ve Başlık
-                  _buildHeader(),
-                  const SizedBox(height: 40),
+                      // Logo ve Başlık
+                      _buildHeader(),
+                      const SizedBox(height: 40),
 
-                  // Aktif oyun kartı
-                  if (_activeGame != null && !_activeGame!.isFinished)
-                    _buildActiveGameCard(),
+                      // Aktif oyun kartı
+                      if (_activeGame != null && !_activeGame!.isFinished)
+                        _buildActiveGameCard(),
 
-                  // Ana butonlar
-                  _buildMainButton(
-                    icon: Icons.add_circle_rounded,
-                    label: 'Yeni Oyun',
-                    subtitle: 'Yeni bir 101 oyunu başlat',
-                    gradient: AppTheme.goldGradient,
-                    textColor: Colors.black,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const NewGameScreen(),
+                      // Ana butonlar
+                      _buildMainButton(
+                        icon: Icons.add_circle_rounded,
+                        label: 'Yeni Oyun',
+                        subtitle: 'Yeni bir 101 oyunu başlat',
+                        gradient: AppTheme.goldGradient,
+                        textColor: Colors.black,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const NewGameScreen(),
+                            ),
+                          ).then((_) => _loadData());
+                        },
+                      ),
+                      const SizedBox(height: 14),
+
+                      _buildMainButton(
+                        icon: Icons.history_rounded,
+                        label: 'Geçmiş Oyunlar',
+                        subtitle: '$_totalGames oyun kayıtlı',
+                        gradient: const LinearGradient(
+                          colors: [
+                            AppTheme.surfaceCard,
+                            AppTheme.surfaceCardLight,
+                          ],
                         ),
-                      ).then((_) => _loadData());
-                    },
-                  ),
-                  const SizedBox(height: 14),
+                        textColor: AppTheme.textPrimary,
+                        borderColor: AppTheme.lightGreen.withValues(alpha: 0.2),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const PastGamesScreen(),
+                            ),
+                          ).then((_) => _loadData());
+                        },
+                      ),
+                      const SizedBox(height: 40),
 
-                  _buildMainButton(
-                    icon: Icons.history_rounded,
-                    label: 'Geçmiş Oyunlar',
-                    subtitle: '$_totalGames oyun kayıtlı',
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.surfaceCard, AppTheme.surfaceCardLight],
+                      // Kısa bilgi
+                      _buildInfoSection(),
+                      const SizedBox(height: 30),
+                    ],
+                  ),
+                ),
+                // Ayarlar Butonu (Sağ üst)
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.settings,
+                      color: AppTheme.textSecondary,
+                      size: 28,
                     ),
-                    textColor: AppTheme.textPrimary,
-                    borderColor: AppTheme.lightGreen.withValues(alpha: 0.2),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const PastGamesScreen(),
-                        ),
-                      ).then((_) => _loadData());
-                    },
+                    onPressed: _showSettings,
                   ),
-                  const SizedBox(height: 40),
-
-                  // Kısa bilgi
-                  _buildInfoSection(),
-                  const SizedBox(height: 30),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

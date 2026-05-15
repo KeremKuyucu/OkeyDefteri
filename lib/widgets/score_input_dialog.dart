@@ -68,8 +68,11 @@ class _CalculatorDialogState extends State<CalculatorDialog> {
             // Başlık
             Row(
               children: [
-                const Icon(Icons.calculate_rounded,
-                    color: AppTheme.accentGold, size: 28),
+                const Icon(
+                  Icons.calculate_rounded,
+                  color: AppTheme.accentGold,
+                  size: 28,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -97,7 +100,8 @@ class _CalculatorDialogState extends State<CalculatorDialog> {
                 color: AppTheme.surfaceCard,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                    color: AppTheme.lightGreen.withValues(alpha: 0.2)),
+                  color: AppTheme.lightGreen.withValues(alpha: 0.2),
+                ),
               ),
               constraints: const BoxConstraints(maxHeight: 120),
               child: SingleChildScrollView(
@@ -115,13 +119,17 @@ class _CalculatorDialogState extends State<CalculatorDialog> {
                           ),
                         ),
                         backgroundColor: AppTheme.surfaceCardLight,
-                        deleteIcon: const Icon(Icons.close,
-                            size: 16, color: AppTheme.dangerRed),
+                        deleteIcon: const Icon(
+                          Icons.close,
+                          size: 16,
+                          color: AppTheme.dangerRed,
+                        ),
                         onDeleted: () {
                           setState(() => _numbers.removeAt(i));
                         },
                         side: BorderSide(
-                            color: AppTheme.lightGreen.withValues(alpha: 0.3)),
+                          color: AppTheme.lightGreen.withValues(alpha: 0.3),
+                        ),
                       ),
                   ],
                 ),
@@ -135,7 +143,9 @@ class _CalculatorDialogState extends State<CalculatorDialog> {
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.surfaceCardLight,
                       borderRadius: BorderRadius.circular(12),
@@ -155,7 +165,9 @@ class _CalculatorDialogState extends State<CalculatorDialog> {
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     gradient: AppTheme.goldGradient,
                     borderRadius: BorderRadius.circular(12),
@@ -219,8 +231,11 @@ class _CalculatorDialogState extends State<CalculatorDialog> {
             _numButton('1'),
             _numButton('2'),
             _numButton('3'),
-            _actionButton(Icons.backspace_outlined, _onBackspace,
-                AppTheme.warningOrange),
+            _actionButton(
+              Icons.backspace_outlined,
+              _onBackspace,
+              AppTheme.warningOrange,
+            ),
           ],
         ),
         const SizedBox(height: 6),
@@ -230,7 +245,10 @@ class _CalculatorDialogState extends State<CalculatorDialog> {
             _numButton('5'),
             _numButton('6'),
             _actionButton(
-                Icons.add_circle_outline, _addNumber, AppTheme.lightGreen),
+              Icons.add_circle_outline,
+              _addNumber,
+              AppTheme.lightGreen,
+            ),
           ],
         ),
         const SizedBox(height: 6),
@@ -240,7 +258,10 @@ class _CalculatorDialogState extends State<CalculatorDialog> {
             _numButton('8'),
             _numButton('9'),
             _actionButton(
-                Icons.remove_circle_outline, _removeLastNumber, AppTheme.dangerRed),
+              Icons.remove_circle_outline,
+              _removeLastNumber,
+              AppTheme.dangerRed,
+            ),
           ],
         ),
         const SizedBox(height: 6),
@@ -308,11 +329,13 @@ class _CalculatorDialogState extends State<CalculatorDialog> {
 class ScoreInputDialog extends StatefulWidget {
   final Player player;
   final int currentRound;
+  final List<Player> allPlayers;
 
   const ScoreInputDialog({
     super.key,
     required this.player,
     required this.currentRound,
+    required this.allPlayers,
   });
 
   @override
@@ -321,19 +344,170 @@ class ScoreInputDialog extends StatefulWidget {
 
 class _ScoreInputDialogState extends State<ScoreInputDialog> {
   final TextEditingController _manualController = TextEditingController();
-  bool _isCiftli = false;
+  late bool _isOkeyFinish;
 
-  void _addScore(ScoreType type, {int? manualPoints}) {
+  @override
+  void initState() {
+    super.initState();
+    // Eğer aynı elde herhangi biri okey atarak bittiyse varsayılan olarak true olsun
+    _isOkeyFinish = widget.allPlayers.any(
+      (p) => p.scores.any(
+        (s) =>
+            s.roundNumber == widget.currentRound &&
+            (s.type == ScoreType.okeyAtarakBitti || s.type == ScoreType.okeyAtarakEldenBitti),
+      ),
+    );
+  }
+
+  void _addScore(
+    ScoreType type, {
+    int? manualPoints,
+    String? causedByPlayerId,
+    bool isCauserCiftli = false,
+  }) {
     final points = manualPoints ?? type.defaultPoints;
+    // Çiftli otomatik uygulanır: elde kalan taşlar için isCiftliGidiyor'a bak
+    final isCiftli =
+        type == ScoreType.eldeKalanTaslar && widget.player.isCiftliGidiyor;
+    final isOkey =
+        !type.isFinishType &&
+        _isOkeyFinish; // Sadece bitirme olmayan skorlar okey çarpanından etkilenir
+
     final entry = ScoreEntry(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       type: type,
       points: points,
-      isCiftli: type == ScoreType.eldeKalanTaslar ? _isCiftli : false,
+      isCiftli: isCiftli,
+      isOkeyFinish: isOkey,
+      isCauserCiftli: isCauserCiftli,
       timestamp: DateTime.now(),
       roundNumber: widget.currentRound,
+      causedByPlayerId: causedByPlayerId,
     );
     Navigator.pop(context, entry);
+  }
+
+  /// hasCausedBy türleri için: önce kimin yaptığını sor, sonra skoru ekle
+  Future<void> _addScoreWithCausedBy(
+    ScoreType type, {
+    int? manualPoints,
+  }) async {
+    if (!type.hasCausedBy) {
+      _addScore(type, manualPoints: manualPoints);
+      return;
+    }
+
+    // Sadece rakipleri göster (kendi takımı arkadaşı hariç)
+    // Karşılıklı oturanlar aynı takımdır (0 ve 2, 1 ve 3).
+    // Yani seatIndex'in 2'ye bölümünden kalanı farklı olanlar rakiptir.
+    final opponents = widget.allPlayers
+        .where((p) => p.seatIndex % 2 != widget.player.seatIndex % 2)
+        .toList();
+
+    final selectedPlayerId = await showDialog<String>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: AppTheme.surfaceDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                type.causedByLabel,
+                style: const TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...opponents.map(
+                (p) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Material(
+                    color: AppTheme.surfaceCard,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => Navigator.pop(context, p.id),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                gradient: AppTheme.goldGradient,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  p.name.isNotEmpty
+                                      ? p.name[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                p.name,
+                                style: const TextStyle(
+                                  color: AppTheme.textPrimary,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const Icon(
+                              Icons.arrow_forward_ios,
+                              color: AppTheme.textMuted,
+                              size: 16,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'İptal',
+                  style: TextStyle(color: AppTheme.textSecondary),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (selectedPlayerId != null && mounted) {
+      final causer = widget.allPlayers.firstWhere(
+        (p) => p.id == selectedPlayerId,
+      );
+      final isCauserCiftli = causer.isCiftliGidiyor;
+      _addScore(
+        type,
+        manualPoints: manualPoints,
+        causedByPlayerId: selectedPlayerId,
+        isCauserCiftli: isCauserCiftli,
+      );
+    }
   }
 
   Future<void> _showManualInput(ScoreType type) async {
@@ -343,8 +517,9 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
         context: context,
         builder: (context) => Dialog(
           backgroundColor: AppTheme.surfaceDark,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -384,17 +559,11 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
         if (!mounted) return;
         final calcResult = await showDialog<int>(
           context: context,
-          builder: (context) => const CalculatorDialog(
-            title: 'Kalan Taşları Hesapla',
-          ),
+          builder: (context) =>
+              const CalculatorDialog(title: 'Kalan Taşları Hesapla'),
         );
-        if (calcResult != null) {
-          // Çiftli seçeneği sor
-          final ciftliResult = await _askCiftli(calcResult);
-          if (ciftliResult != null && mounted) {
-            setState(() => _isCiftli = ciftliResult);
-            _addScore(type, manualPoints: calcResult);
-          }
+        if (calcResult != null && mounted) {
+          _addScore(type, manualPoints: calcResult);
         }
       } else {
         if (!mounted) return;
@@ -404,53 +573,6 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
       if (!mounted) return;
       await _showDirectInput(type);
     }
-  }
-
-  Future<bool?> _askCiftli(int points) async {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surfaceDark,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Çiftli mi gitti?',
-          style: TextStyle(color: AppTheme.textPrimary),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Taş puanı: $points',
-              style: const TextStyle(color: AppTheme.textSecondary),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Çiftli ise: ${points * 2}',
-              style: const TextStyle(
-                color: AppTheme.accentGold,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Hayır',
-                style: TextStyle(color: AppTheme.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accentGold,
-              foregroundColor: Colors.black,
-            ),
-            child: const Text('Evet, Çiftli',
-                style: TextStyle(fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _showDirectInput(ScoreType type) async {
@@ -493,8 +615,10 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('İptal',
-                style: TextStyle(color: AppTheme.textSecondary)),
+            child: const Text(
+              'İptal',
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -510,12 +634,8 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
     );
 
     if (result != null) {
-      if (type == ScoreType.eldeKalanTaslar) {
-        final ciftliResult = await _askCiftli(result);
-        if (ciftliResult != null) {
-          setState(() => _isCiftli = ciftliResult);
-          _addScore(type, manualPoints: result);
-        }
+      if (type.hasCausedBy) {
+        _addScoreWithCausedBy(type, manualPoints: result);
       } else {
         _addScore(type, manualPoints: result);
       }
@@ -570,8 +690,11 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios,
-                  color: AppTheme.textMuted, size: 16),
+              const Icon(
+                Icons.arrow_forward_ios,
+                color: AppTheme.textMuted,
+                size: 16,
+              ),
             ],
           ),
         ),
@@ -588,8 +711,7 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
         decoration: BoxDecoration(
           color: AppTheme.surfaceDark,
           borderRadius: BorderRadius.circular(24),
-          border:
-              Border.all(color: AppTheme.lightGreen.withValues(alpha: 0.2)),
+          border: Border.all(color: AppTheme.lightGreen.withValues(alpha: 0.2)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.5),
@@ -650,21 +772,103 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
                     ),
                   ),
                   IconButton(
-                    icon:
-                        const Icon(Icons.close, color: AppTheme.textMuted),
+                    icon: const Icon(Icons.close, color: AppTheme.textMuted),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
-              // Sabit puanlı butonlar
+              // Çiftli toggle göstergesi
+              if (widget.player.isCiftliGidiyor)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentGold.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppTheme.accentGold.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.double_arrow_rounded,
+                        color: AppTheme.accentGold,
+                        size: 18,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'Çiftli Gidiyor — Taş puanı ×2 uygulanacak',
+                        style: TextStyle(
+                          color: AppTheme.accentGold,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // BİTİRME bölümü
+              _buildSectionDivider('BİTİRME'),
+              const SizedBox(height: 8),
+              _buildScoreButton(
+                ScoreType.normalBitti,
+                color: AppTheme.successGreen,
+                icon: Icons.check_circle_rounded,
+              ),
+              const SizedBox(height: 8),
               _buildScoreButton(
                 ScoreType.eldenBitti,
                 color: AppTheme.successGreen,
                 icon: Icons.emoji_events_rounded,
               ),
               const SizedBox(height: 8),
+              _buildScoreButton(
+                ScoreType.okeyAtarakBitti,
+                color: const Color(0xFF7E57C2),
+                icon: Icons.style_rounded,
+              ),
+              const SizedBox(height: 8),
+              _buildScoreButton(
+                ScoreType.okeyAtarakEldenBitti,
+                color: const Color(0xFF673AB7),
+                icon: Icons.military_tech_rounded,
+              ),
+              const SizedBox(height: 16),
+
+              // CEZA bölümü
+              _buildSectionDivider('CEZA'),
+              const SizedBox(height: 8),
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceCard,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: AppTheme.warningOrange.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: SwitchListTile(
+                  title: const Text(
+                    'Rakip Okey Atarak Bitirdi\n(Cezalar x2)',
+                    style: TextStyle(
+                      color: AppTheme.warningOrange,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  value: _isOkeyFinish,
+                  onChanged: (v) => setState(() => _isOkeyFinish = v),
+                  activeColor: AppTheme.warningOrange,
+                ),
+              ),
               _buildScoreButton(
                 ScoreType.islekAtti,
                 color: AppTheme.warningOrange,
@@ -690,31 +894,9 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
               ),
               const SizedBox(height: 16),
 
-              // Ayırıcı
-              Row(
-                children: [
-                  Expanded(
-                      child: Divider(
-                          color: AppTheme.lightGreen.withValues(alpha: 0.2))),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      'MANUEL GİRİŞ',
-                      style: TextStyle(
-                        color: AppTheme.textMuted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                      child: Divider(
-                          color: AppTheme.lightGreen.withValues(alpha: 0.2))),
-                ],
-              ),
-              const SizedBox(height: 12),
-
+              // MANUEL GİRİŞ bölümü
+              _buildSectionDivider('MANUEL GİRİŞ'),
+              const SizedBox(height: 8),
               _buildScoreButton(
                 ScoreType.attigiTasiAldilar,
                 color: AppTheme.accentAmber,
@@ -735,6 +917,31 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
     );
   }
 
+  Widget _buildSectionDivider(String title) {
+    return Row(
+      children: [
+        Expanded(
+          child: Divider(color: AppTheme.lightGreen.withValues(alpha: 0.2)),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            title,
+            style: const TextStyle(
+              color: AppTheme.textMuted,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.5,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Divider(color: AppTheme.lightGreen.withValues(alpha: 0.2)),
+        ),
+      ],
+    );
+  }
+
   Widget _buildScoreButton(
     ScoreType type, {
     required Color color,
@@ -749,6 +956,8 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
         onTap: () {
           if (isManual) {
             _showManualInput(type);
+          } else if (type.hasCausedBy) {
+            _addScoreWithCausedBy(type);
           } else {
             _addScore(type);
           }
