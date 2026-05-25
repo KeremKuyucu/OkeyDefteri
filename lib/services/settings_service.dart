@@ -6,35 +6,53 @@ class SettingsService {
   static const String _vibrationKey = 'vibration_enabled';
   static const String _soundKey = 'sound_enabled';
   static const String _telemetryKey = 'telemetry_enabled';
+  static const String _languageKey = 'app_language';
+  static const String _toxicNicknamesKey = 'toxic_nicknames_enabled';
 
-  static Future<bool> getVibrationEnabled() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_vibrationKey) ?? true;
+  static late SharedPreferences _prefs;
+
+  static Future<void> init() async {
+    _prefs = await SharedPreferences.getInstance();
+  }
+
+  static String getLanguage() {
+    return _prefs.getString(_languageKey) ?? 'eng';
+  }
+
+  static Future<void> setLanguage(String value) async {
+    await _prefs.setString(_languageKey, value);
+  }
+
+  static bool getVibrationEnabled() {
+    return _prefs.getBool(_vibrationKey) ?? true;
   }
 
   static Future<void> setVibrationEnabled(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_vibrationKey, value);
+    await _prefs.setBool(_vibrationKey, value);
   }
 
-  static Future<bool> getSoundEnabled() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_soundKey) ?? true;
+  static bool getSoundEnabled() {
+    return _prefs.getBool(_soundKey) ?? true;
   }
 
   static Future<void> setSoundEnabled(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_soundKey, value);
+    await _prefs.setBool(_soundKey, value);
   }
 
-  static Future<bool> getTelemetryEnabled() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_telemetryKey) ?? true;
+  static bool getTelemetryEnabled() {
+    return _prefs.getBool(_telemetryKey) ?? true;
   }
 
   static Future<void> setTelemetryEnabled(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_telemetryKey, value);
+    await _prefs.setBool(_telemetryKey, value);
+  }
+
+  static bool getToxicNicknamesEnabled() {
+    return _prefs.getBool(_toxicNicknamesKey) ?? false;
+  }
+
+  static Future<void> setToxicNicknamesEnabled(bool value) async {
+    await _prefs.setBool(_toxicNicknamesKey, value);
   }
 }
 
@@ -42,7 +60,7 @@ class AudioVibrationService {
   static final AudioPlayer _audioPlayer = AudioPlayer();
   
   static Future<void> playClickSound() async {
-    final isSoundEnabled = await SettingsService.getSoundEnabled();
+    final isSoundEnabled = SettingsService.getSoundEnabled();
     if (isSoundEnabled) {
       // Play a click sound
       try {
@@ -54,7 +72,7 @@ class AudioVibrationService {
   }
 
   static Future<void> vibrate() async {
-    final isVibrationEnabled = await SettingsService.getVibrationEnabled();
+    final isVibrationEnabled = SettingsService.getVibrationEnabled();
     if (isVibrationEnabled) {
       try {
         final hasVibrator = await Vibration.hasVibrator();
@@ -68,7 +86,7 @@ class AudioVibrationService {
   }
 
   static Future<void> vibrateHeavy() async {
-    final isVibrationEnabled = await SettingsService.getVibrationEnabled();
+    final isVibrationEnabled = SettingsService.getVibrationEnabled();
     if (isVibrationEnabled) {
       try {
         final hasVibrator = await Vibration.hasVibrator();

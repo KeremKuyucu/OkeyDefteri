@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/game_models.dart';
 import '../theme/app_theme.dart';
 import 'game_screen.dart';
+import '../services/localization_service.dart';
 
 class NewGameScreen extends StatefulWidget {
   const NewGameScreen({super.key});
@@ -12,8 +13,12 @@ class NewGameScreen extends StatefulWidget {
 
 class _NewGameScreenState extends State<NewGameScreen>
     with SingleTickerProviderStateMixin {
-  final _team1NameController = TextEditingController(text: 'Takım 1');
-  final _team2NameController = TextEditingController(text: 'Takım 2');
+  final _team1NameController = TextEditingController(
+    text: Localization.t('new_game.team_1'),
+  );
+  final _team2NameController = TextEditingController(
+    text: Localization.t('new_game.team_2'),
+  );
   final _player1Controller = TextEditingController();
   final _player2Controller = TextEditingController();
   final _player3Controller = TextEditingController();
@@ -57,7 +62,7 @@ class _NewGameScreenState extends State<NewGameScreen>
     if (p1.isEmpty || p2.isEmpty || p3.isEmpty || p4.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Tüm oyuncu isimlerini giriniz!'),
+          content: Text(Localization.t('new_game.player_name_required')),
           backgroundColor: AppTheme.dangerRed,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -89,7 +94,7 @@ class _NewGameScreenState extends State<NewGameScreen>
       ),
       team2: Team(
         id: 'team2_${DateTime.now().millisecondsSinceEpoch}',
-        name: t2.isNotEmpty ? t2 : 'Takım 2',
+        name: t2.isNotEmpty ? t2 : Localization.t('new_game.team_2'),
         player1: Player(
           id: 'p2_${DateTime.now().millisecondsSinceEpoch}',
           name: p2,
@@ -116,8 +121,8 @@ class _NewGameScreenState extends State<NewGameScreen>
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
-          'Yeni Oyun',
+        title: Text(
+          Localization.t('new_game.title'),
           style: TextStyle(
             color: AppTheme.textPrimary,
             fontWeight: FontWeight.w700,
@@ -150,7 +155,7 @@ class _NewGameScreenState extends State<NewGameScreen>
                 ),
                 child: Column(
                   children: [
-                    const Row(
+                    Row(
                       children: [
                         Icon(
                           Icons.info_outline,
@@ -159,7 +164,7 @@ class _NewGameScreenState extends State<NewGameScreen>
                         ),
                         SizedBox(width: 8),
                         Text(
-                          'Masa Düzeni',
+                          Localization.t('new_game.table_layout'),
                           style: TextStyle(
                             color: AppTheme.accentGold,
                             fontSize: 14,
@@ -170,7 +175,7 @@ class _NewGameScreenState extends State<NewGameScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Karşılıklı oturan oyuncular takım arkadaşıdır.\nOyuncu 1 (üst) ↔ Oyuncu 3 (alt) = Takım 1\nOyuncu 2 (sağ) ↔ Oyuncu 4 (sol) = Takım 2',
+                      Localization.t('new_game.table_layout_info'),
                       style: TextStyle(
                         color: AppTheme.textSecondary.withValues(alpha: 0.8),
                         fontSize: 12,
@@ -184,10 +189,10 @@ class _NewGameScreenState extends State<NewGameScreen>
 
               // Takım 1
               _buildTeamSection(
-                teamName: 'Takım 1',
+                teamName: Localization.t('new_game.team_1'),
                 teamController: _team1NameController,
-                player1Label: 'Oyuncu 1 (Üst)',
-                player2Label: 'Oyuncu 3 (Alt)',
+                player1Label: Localization.t('new_game.player_1_top'),
+                player2Label: Localization.t('new_game.player_3_bottom'),
                 player1Controller: _player1Controller,
                 player2Controller: _player3Controller,
                 color: AppTheme.lightGreen,
@@ -196,10 +201,10 @@ class _NewGameScreenState extends State<NewGameScreen>
 
               // Takım 2
               _buildTeamSection(
-                teamName: 'Takım 2',
+                teamName: Localization.t('new_game.team_2'),
                 teamController: _team2NameController,
-                player1Label: 'Oyuncu 2 (Sağ)',
-                player2Label: 'Oyuncu 4 (Sol)',
+                player1Label: Localization.t('new_game.player_2_right'),
+                player2Label: Localization.t('new_game.player_4_left'),
                 player1Controller: _player2Controller,
                 player2Controller: _player4Controller,
                 color: AppTheme.accentAmber,
@@ -238,7 +243,7 @@ class _NewGameScreenState extends State<NewGameScreen>
                     ),
                     child: Container(
                       alignment: Alignment.center,
-                      child: const Row(
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
@@ -248,7 +253,7 @@ class _NewGameScreenState extends State<NewGameScreen>
                           ),
                           SizedBox(width: 8),
                           Text(
-                            'OYUNU BAŞLAT',
+                            Localization.t('new_game.start_game'),
                             style: TextStyle(
                               color: Colors.black,
                               fontSize: 18,
@@ -310,7 +315,7 @@ class _NewGameScreenState extends State<NewGameScreen>
                     fontWeight: FontWeight.w700,
                   ),
                   decoration: InputDecoration(
-                    labelText: 'Takım İsmi',
+                    labelText: Localization.t('new_game.team_name'),
                     labelStyle: TextStyle(color: color.withValues(alpha: 0.6)),
                     filled: true,
                     fillColor: AppTheme.surfaceCardLight,
@@ -394,16 +399,16 @@ class _NewGameScreenState extends State<NewGameScreen>
 
   Widget _buildTablePreview() {
     final p1 = _player1Controller.text.isEmpty
-        ? 'Oyuncu 1'
+        ? Localization.t('new_game.player_1')
         : _player1Controller.text;
     final p2 = _player2Controller.text.isEmpty
-        ? 'Oyuncu 2'
+        ? Localization.t('new_game.player_2')
         : _player2Controller.text;
     final p3 = _player3Controller.text.isEmpty
-        ? 'Oyuncu 3'
+        ? Localization.t('new_game.player_3')
         : _player3Controller.text;
     final p4 = _player4Controller.text.isEmpty
-        ? 'Oyuncu 4'
+        ? Localization.t('new_game.player_4')
         : _player4Controller.text;
 
     return Container(

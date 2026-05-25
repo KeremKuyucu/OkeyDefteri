@@ -3,10 +3,14 @@ import 'package:flutter/services.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'services/logging_service.dart';
+import 'services/localization_service.dart';
+import 'services/settings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SettingsService.init();
   await LoggingService.init();
+  await Localization.init();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -47,7 +51,7 @@ class _OkeyDefteriAppState extends State<OkeyDefteriApp> {
     return KeyedSubtree(
       key: key,
       child: MaterialApp(
-        title: 'Okey 101 Skor Defteri',
+        title: Localization.t('app.name'),
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
         home: const HomeScreen(),

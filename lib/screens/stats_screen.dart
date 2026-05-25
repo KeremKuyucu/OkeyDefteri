@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/game_models.dart';
 import '../theme/app_theme.dart';
+import '../services/localization_service.dart';
 
 class StatsScreen extends StatelessWidget {
   final Game game;
@@ -37,13 +38,13 @@ class StatsScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Takım karşılaştırması
-            _buildSectionTitle('Takım Karşılaştırması'),
+            _buildSectionTitle(Localization.t('stats.team_comparison')),
             const SizedBox(height: 8),
             _buildTeamComparison(),
             const SizedBox(height: 24),
 
             // Oyuncu sıralaması
-            _buildSectionTitle('Oyuncu Sıralaması'),
+            _buildSectionTitle(Localization.t('stats.per_player')),
             const SizedBox(height: 8),
             ...sortedPlayers
                 .asMap()
@@ -53,14 +54,14 @@ class StatsScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Detaylı kırılım
-            _buildSectionTitle('Detaylı Puan Kırılımı'),
+            _buildSectionTitle(Localization.t('stats.detailed_score_breakdown')),
             const SizedBox(height: 8),
             ...players.map((p) => _buildPlayerBreakdown(p)),
 
             const SizedBox(height: 24),
 
             // Hata analizi
-            _buildSectionTitle('Hata Analizi'),
+            _buildSectionTitle(Localization.t('stats.error_analysis')),
             const SizedBox(height: 8),
             _buildErrorAnalysis(),
 
@@ -224,7 +225,7 @@ class StatsScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${player.winCount} galibiyet • ${player.penaltyCount} ceza',
+                  '${player.winCount} ${Localization.t('stats.wins')} • ${player.penaltyCount} ${Localization.t('stats.penalties')}',
                   style: const TextStyle(
                     color: AppTheme.textMuted,
                     fontSize: 12,
@@ -310,7 +311,7 @@ class StatsScreen extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                'Toplam: ${player.totalScore}',
+                '${Localization.t('stats.total')}: ${player.totalScore}',
                 style: TextStyle(
                   color: player.totalScore < 0
                       ? AppTheme.successGreen
@@ -323,9 +324,9 @@ class StatsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           if (breakdown.isEmpty)
-            const Text(
-              'Henüz skor girişi yok',
-              style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
+            Text(
+              Localization.t('stats.no_scores'),
+              style: const TextStyle(color: AppTheme.textMuted, fontSize: 12),
             )
           else
             ...breakdown.entries.map((e) {
@@ -422,10 +423,10 @@ class StatsScreen extends StatelessWidget {
           // Başlık satırı
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 flex: 3,
                 child: Text(
-                  'Hata Türü',
+                  Localization.t('stats.error_type'),
                   style: TextStyle(
                     color: AppTheme.textMuted,
                     fontSize: 11,
@@ -494,10 +495,10 @@ class StatsScreen extends StatelessWidget {
           // Galibiyet satırı
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 flex: 3,
                 child: Text(
-                  '🏆 Galibiyet',
+                  Localization.t('stats.win_with_emoji'),
                   style: TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 12,

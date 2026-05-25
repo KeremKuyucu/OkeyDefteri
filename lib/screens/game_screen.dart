@@ -8,6 +8,7 @@ import '../widgets/score_input_dialog.dart';
 import 'score_history_screen.dart';
 import 'stats_screen.dart';
 import '../services/settings_service.dart';
+import '../services/localization_service.dart';
 
 class GameScreen extends StatefulWidget {
   final Game game;
@@ -48,7 +49,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Future<void> _openScoreDialog(Player player) async {
     if (_game.isFinished) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bu oyun bitmiştir, müdahale edilemez.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(Localization.t('game.finished'))));
       return;
     }
     AudioVibrationService.playClickSound();
@@ -72,7 +75,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   void _undoLastScore(Player player) {
     if (_game.isFinished) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bu oyun bitmiştir, müdahale edilemez.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(Localization.t('game.finished'))));
       return;
     }
     if (player.scores.isEmpty) return;
@@ -89,7 +94,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           style: TextStyle(color: AppTheme.textPrimary),
         ),
         content: Text(
-          '${player.name} için son girilen puanı (${player.scores.last.effectivePoints}) geri almak istediğinize emin misiniz?',
+          Localization.t(
+            'game.process_cancel',
+            args: [player.name, _game.currentRound],
+          ),
           style: const TextStyle(color: AppTheme.textSecondary),
         ),
         actions: [
@@ -142,7 +150,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'El ${_game.currentRound} başladı!',
+          Localization.t('game.tour_start_info', args: [_game.currentRound]),
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         backgroundColor: AppTheme.lightGreen,
@@ -160,20 +168,20 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.surfaceDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Oyunu Bitir',
+        title: Text(
+          Localization.t('game.end_game'),
           style: TextStyle(color: AppTheme.textPrimary),
         ),
-        content: const Text(
-          'Oyunu bitirmek istediğinize emin misiniz? Skorlar kaydedilecektir.',
+        content: Text(
+          Localization.t('game.end_game_confirm'),
           style: TextStyle(color: AppTheme.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'İptal',
-              style: TextStyle(color: AppTheme.textSecondary),
+            child: Text(
+              Localization.t('common.cancel'),
+              style: const TextStyle(color: AppTheme.textSecondary),
             ),
           ),
           ElevatedButton(
@@ -190,7 +198,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.dangerRed,
             ),
-            child: const Text('Bitir'),
+            child: Text(Localization.t('common.yes')),
           ),
         ],
       ),
@@ -215,11 +223,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             // Oyun masası
             Expanded(child: _buildGameTable()),
 
-            // Reklam alanı
+            // TODO: Banner reklam buraya eklenecek
             Container(
               height: 50,
               width: double.infinity,
               color: Colors.transparent,
+              alignment: Alignment.center,
+              child: const Text('Banner Ad Placeholder', style: TextStyle(color: Colors.transparent)),
             ),
 
             // Alt bar
@@ -246,8 +256,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           Expanded(
             child: Column(
               children: [
-                const Text(
-                  'Okey 101',
+                Text(
+                  Localization.t('game.title'),
                   style: TextStyle(
                     color: AppTheme.accentGold,
                     fontSize: 20,
@@ -256,7 +266,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   ),
                 ),
                 Text(
-                  'El ${_game.currentRound}',
+                  Localization.t('game.round', args: [_game.currentRound]),
                   style: const TextStyle(
                     color: AppTheme.textMuted,
                     fontSize: 12,
@@ -272,10 +282,18 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               borderRadius: BorderRadius.circular(14),
             ),
             itemBuilder: (context) => [
-              _popupItem('history', Icons.history, 'Skor Geçmişi'),
-              _popupItem('stats', Icons.analytics, 'İstatistikler'),
+              _popupItem(
+                'history',
+                Icons.history,
+                Localization.t('game.history'),
+              ),
+              _popupItem(
+                'stats',
+                Icons.analytics,
+                Localization.t('game.stats'),
+              ),
               if (!_game.isFinished)
-                _popupItem('end', Icons.flag, 'Oyunu Bitir'),
+                _popupItem('end', Icons.flag, Localization.t('game.end_game')),
             ],
             onSelected: (value) {
               switch (value) {
@@ -342,7 +360,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       player: _game.team1.player1,
                       team: _game.team1,
                       position: 0,
-                      nickname: _game.team1.player1.getNickname(_game.allPlayers, _game.currentRound),
+                      nickname: _game.team1.player1.getNickname(
+                        _game.allPlayers,
+                        _game.currentRound,
+                      ),
                       onTap: () => _openScoreDialog(_game.team1.player1),
                       onToggleCiftli: () => _toggleCiftli(_game.team1.player1),
                     ),
@@ -361,9 +382,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                           player: _game.team2.player2,
                           team: _game.team2,
                           position: 3,
-                          nickname: _game.team2.player2.getNickname(_game.allPlayers, _game.currentRound),
+                          nickname: _game.team2.player2.getNickname(
+                            _game.allPlayers,
+                            _game.currentRound,
+                          ),
                           onTap: () => _openScoreDialog(_game.team2.player2),
-                          onToggleCiftli: () => _toggleCiftli(_game.team2.player2),
+                          onToggleCiftli: () =>
+                              _toggleCiftli(_game.team2.player2),
                         ),
                       ),
 
@@ -380,12 +405,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                               gradient: AppTheme.tableGradient,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: AppTheme.accentGold.withValues(alpha: 0.3),
+                                color: AppTheme.accentGold.withValues(
+                                  alpha: 0.3,
+                                ),
                                 width: 2,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppTheme.primaryGreen.withValues(alpha: 0.3),
+                                  color: AppTheme.primaryGreen.withValues(
+                                    alpha: 0.3,
+                                  ),
                                   blurRadius: 24,
                                   spreadRadius: 4,
                                 ),
@@ -395,10 +424,16 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Text('🎴', style: TextStyle(fontSize: 32)),
+                                  const Text(
+                                    '🎴',
+                                    style: TextStyle(fontSize: 32),
+                                  ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'El ${_game.currentRound}',
+                                    Localization.t(
+                                      'game.round',
+                                      args: [_game.currentRound],
+                                    ),
                                     style: TextStyle(
                                       color: AppTheme.textPrimary.withValues(
                                         alpha: 0.7,
@@ -423,9 +458,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                           player: _game.team2.player1,
                           team: _game.team2,
                           position: 1,
-                          nickname: _game.team2.player1.getNickname(_game.allPlayers, _game.currentRound),
+                          nickname: _game.team2.player1.getNickname(
+                            _game.allPlayers,
+                            _game.currentRound,
+                          ),
                           onTap: () => _openScoreDialog(_game.team2.player1),
-                          onToggleCiftli: () => _toggleCiftli(_game.team2.player1),
+                          onToggleCiftli: () =>
+                              _toggleCiftli(_game.team2.player1),
                         ),
                       ),
                     ],
@@ -440,7 +479,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       player: _game.team1.player2,
                       team: _game.team1,
                       position: 2,
-                      nickname: _game.team1.player2.getNickname(_game.allPlayers, _game.currentRound),
+                      nickname: _game.team1.player2.getNickname(
+                        _game.allPlayers,
+                        _game.currentRound,
+                      ),
                       onTap: () => _openScoreDialog(_game.team1.player2),
                       onToggleCiftli: () => _toggleCiftli(_game.team1.player2),
                     ),
@@ -468,7 +510,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         children: [
           _bottomButton(
             icon: Icons.history,
-            label: 'Geçmiş',
+            label: Localization.t('game.history'),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -479,20 +521,20 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           if (!_game.isFinished) ...[
             _bottomButton(
               icon: Icons.skip_next_rounded,
-              label: 'Sonraki El',
+              label: Localization.t('game.next_round'),
               onTap: _nextRound,
               isPrimary: true,
             ),
             _bottomButton(
               icon: Icons.flag_rounded,
-              label: 'Bitir',
+              label: Localization.t('game.end_game'),
               onTap: _endGame,
               isDanger: true,
             ),
           ],
           _bottomButton(
             icon: Icons.analytics_outlined,
-            label: 'İstatistik',
+            label: Localization.t('game.stats'),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => StatsScreen(game: _game)),

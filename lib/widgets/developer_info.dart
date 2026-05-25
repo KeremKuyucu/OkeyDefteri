@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
+import '../services/localization_service.dart';
 
 class DeveloperInfo {
   static Future<void> show(BuildContext context) async {
@@ -21,12 +22,12 @@ class DeveloperInfo {
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: AppTheme.surfaceDark,
-          title: const Row(
+          title: Row(
             children: [
               Icon(Icons.info_outline, color: AppTheme.accentGold),
               SizedBox(width: 10),
               Text(
-                'Hakkında',
+                Localization.t('about.title'),
                 style: TextStyle(
                   color: AppTheme.textPrimary,
                   fontWeight: FontWeight.bold,
@@ -38,9 +39,9 @@ class DeveloperInfo {
             child: ListBody(
               children: <Widget>[
                 // Uygulama Adı
-                const Center(
+                Center(
                   child: Text(
-                    'Okey 101 Defteri',
+                    Localization.t('about.app_name'),
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -51,7 +52,7 @@ class DeveloperInfo {
                 const SizedBox(height: 8),
                 Center(
                   child: Text(
-                    'Versiyon: $localVersion',
+                    Localization.t('about.app_version', args: [localVersion]),
                     style: const TextStyle(color: AppTheme.textSecondary),
                   ),
                 ),
@@ -59,27 +60,27 @@ class DeveloperInfo {
                 // Bilgi Satırları
                 _buildInfoTile(
                   icon: Icons.person_outline,
-                  title: 'Geliştirici',
+                  title: Localization.t('about.developer'),
                   subtitle: 'Kerem Kuyucu',
                   url: 'https://github.com/keremkuyucu',
                 ),
                 _buildInfoTile(
                   icon: Icons.code,
-                  title: 'Kaynak Kod',
+                  title: Localization.t('about.source_code'),
                   subtitle: 'github.com/keremkuyucu/okey_defteri',
                   url: 'https://github.com/KeremKuyucu/okey-defteri-flutter',
                 ),
                 _buildInfoTile(
                   icon: Icons.email_outlined,
-                  title: 'İletişim',
+                  title: Localization.t('about.contact'),
                   subtitle: 'contact@keremkk.com.tr',
                   url: 'mailto:contact@keremkk.com.tr',
                 ),
                 const Divider(height: 24, color: AppTheme.textMuted),
                 // Uygulama Açıklaması
-                const Text(
-                  'Okey 101 deneyiminizi bir üst seviyeye taşıyın! Kalem ve kağıt derdine son veren bu akıllı asistan ile puanları anında hesaplayın, maç geçmişinizi detaylı istatistiklerle takip edin ve oyun performansınıza göre kazandığınız eğlenceli lakapların tadını çıkarın.\n\nSiz sadece oyununuza odaklanın, gerisini deftere bırakın.',
-                  style: TextStyle(
+                Text(
+                  Localization.t('about.description'),
+                  style: const TextStyle(
                     fontSize: 13,
                     height: 1.5,
                     color: AppTheme.textPrimary,
@@ -100,14 +101,14 @@ class DeveloperInfo {
           actions: <Widget>[
             // Lisansları Görüntüle Butonu
             TextButton(
-              child: const Text(
-                'Lisanslar',
+              child: Text(
+                Localization.t('about.licenses'),
                 style: TextStyle(color: AppTheme.accentGold),
               ),
               onPressed: () {
                 showLicensePage(
                   context: context,
-                  applicationName: 'Okey 101 Defteri',
+                  applicationName: Localization.t('about.app_name'),
                   applicationVersion: localVersion,
                   applicationLegalese: '© 2026 Kerem Kuyucu',
                 );
@@ -115,9 +116,9 @@ class DeveloperInfo {
             ),
             // Kapat Butonu
             TextButton(
-              child: const Text(
-                'Kapat',
-                style: TextStyle(color: AppTheme.textSecondary),
+              child: Text(
+                Localization.t('common.close'),
+                style: const TextStyle(color: AppTheme.textSecondary),
               ),
               onPressed: () {
                 Navigator.of(context).pop();

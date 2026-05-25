@@ -2,7 +2,7 @@ name: okey_defteri
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 1.0.1
+version: 1.0.2
 
 environment:
   sdk: ^3.12.0-154.0.dev
@@ -40,6 +40,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/sounds/
+    - assets/lang/
+    - assets/images/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

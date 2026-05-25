@@ -3,6 +3,7 @@ import '../models/game_models.dart';
 import '../theme/app_theme.dart';
 import '../services/storage_service.dart';
 import 'game_screen.dart';
+import '../services/localization_service.dart';
 
 class PastGamesScreen extends StatefulWidget {
   const PastGamesScreen({super.key});
@@ -35,18 +36,18 @@ class _PastGamesScreenState extends State<PastGamesScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.surfaceDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Oyunu Sil',
+        title: Text(
+          Localization.t('past_games.delete_game'),
           style: TextStyle(color: AppTheme.textPrimary),
         ),
-        content: const Text(
-          'Bu oyun kaydını silmek istediğinize emin misiniz?',
+        content: Text(
+          Localization.t('past_games.delete_game_confirm'),
           style: TextStyle(color: AppTheme.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('İptal',
+            child:  Text(Localization.t('common.cancel'),
                 style: TextStyle(color: AppTheme.textSecondary)),
           ),
           ElevatedButton(
@@ -54,7 +55,7 @@ class _PastGamesScreenState extends State<PastGamesScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.dangerRed,
             ),
-            child: const Text('Sil'),
+            child:  Text(Localization.t('common.delete')),
           ),
         ],
       ),
@@ -73,9 +74,9 @@ class _PastGamesScreenState extends State<PastGamesScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
-          'Geçmiş Oyunlar',
-          style: TextStyle(
+        title: Text(
+          Localization.t('past_games.title'),
+          style: const TextStyle(
             color: AppTheme.textPrimary,
             fontWeight: FontWeight.w700,
           ),
@@ -98,8 +99,8 @@ class _PastGamesScreenState extends State<PastGamesScreen> {
                           size: 64,
                           color: AppTheme.textMuted.withValues(alpha: 0.3)),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Henüz kayıtlı oyun yok',
+                      Text(
+                        Localization.t('past_games.no_games'),
                         style: TextStyle(
                           color: AppTheme.textMuted,
                           fontSize: 16,
@@ -167,7 +168,7 @@ class _PastGamesScreenState extends State<PastGamesScreen> {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            game.isFinished ? 'BİTTİ' : 'DEVAM EDİYOR',
+                            game.isFinished ? Localization.t('common.finished') : Localization.t('common.ongoing'),
                             style: TextStyle(
                               color: game.isFinished
                                   ? AppTheme.textMuted
@@ -180,7 +181,7 @@ class _PastGamesScreenState extends State<PastGamesScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '${game.currentRound} el',
+                          Localization.t('past_games.round',args: [ game.currentRound.toString()]),
                           style: const TextStyle(
                             color: AppTheme.textMuted,
                             fontSize: 12,
@@ -311,8 +312,8 @@ class _PastGamesScreenState extends State<PastGamesScreen> {
     final hours = duration.inHours;
     final minutes = duration.inMinutes % 60;
     if (hours > 0) {
-      return '${hours}s ${minutes}dk';
+      return Localization.t('past_games.hour_minute',args:[hours.toString(),minutes.toString()]);
     }
-    return '${minutes}dk';
+    return Localization.t('past_games.minute',args: [minutes.toString()]);
   }
 }

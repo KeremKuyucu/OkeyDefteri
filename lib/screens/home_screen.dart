@@ -8,6 +8,7 @@ import 'past_games_screen.dart';
 import 'game_screen.dart';
 import '../widgets/developer_info.dart';
 import '../services/settings_service.dart';
+import '../services/localization_service.dart';
 import '../main.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -72,9 +73,10 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _showSettings() async {
-    bool isVibrationEnabled = await SettingsService.getVibrationEnabled();
-    bool isSoundEnabled = await SettingsService.getSoundEnabled();
-    bool isTelemetryEnabled = await SettingsService.getTelemetryEnabled();
+    bool isVibrationEnabled = SettingsService.getVibrationEnabled();
+    bool isSoundEnabled = SettingsService.getSoundEnabled();
+    bool isTelemetryEnabled = SettingsService.getTelemetryEnabled();
+    bool isToxicNicknamesEnabled = SettingsService.getToxicNicknamesEnabled();
 
     if (!mounted) return;
 
@@ -92,8 +94,8 @@ class _HomeScreenState extends State<HomeScreen>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Ayarlar',
+                Text(
+                  Localization.t('settings.title'),
                   style: TextStyle(
                     color: AppTheme.textPrimary,
                     fontSize: 24,
@@ -103,11 +105,48 @@ class _HomeScreenState extends State<HomeScreen>
                 const SizedBox(height: 24),
                 ListTile(
                   leading: const Icon(
+                    Icons.language,
+                    color: AppTheme.accentGold,
+                  ),
+                  title: Text(
+                    Localization.t('settings.language'),
+                    style: TextStyle(color: AppTheme.textPrimary),
+                  ),
+                  trailing: DropdownButton<String>(
+                    value: Localization.currentLanguage,
+                    dropdownColor: AppTheme.surfaceDark,
+                    style: const TextStyle(color: AppTheme.textPrimary),
+                    underline: const SizedBox(),
+                    icon: const Icon(
+                      Icons.arrow_drop_down,
+                      color: AppTheme.accentGold,
+                    ),
+                    items: Localization.supportedLanguages.map((String lang) {
+                      return DropdownMenuItem<String>(
+                        value: lang,
+                        child: Text(Localization.getDisplayName(lang)),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) async {
+                      if (newValue != null &&
+                          newValue != Localization.currentLanguage) {
+                        await SettingsService.setLanguage(newValue);
+                        await Localization.changeLanguage(newValue);
+                        if (mounted) {
+                          Navigator.pop(context);
+                          OkeyDefteriApp.restartApp(context);
+                        }
+                      }
+                    },
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(
                     Icons.vibration,
                     color: AppTheme.accentGold,
                   ),
-                  title: const Text(
-                    'Titreşim',
+                  title: Text(
+                    Localization.t('settings.vibration'),
                     style: TextStyle(color: AppTheme.textPrimary),
                   ),
                   trailing: Switch(
@@ -129,8 +168,8 @@ class _HomeScreenState extends State<HomeScreen>
                     Icons.volume_up,
                     color: AppTheme.accentGold,
                   ),
-                  title: const Text(
-                    'Ses Efektleri',
+                  title: Text(
+                    Localization.t('settings.sound_effects'),
                     style: TextStyle(color: AppTheme.textPrimary),
                   ),
                   trailing: Switch(
@@ -152,8 +191,8 @@ class _HomeScreenState extends State<HomeScreen>
                     Icons.security,
                     color: AppTheme.accentGold,
                   ),
-                  title: const Text(
-                    'Anonim Kullanım Verisi (Ping) Gönder',
+                  title: Text(
+                    Localization.t('settings.telemetry'),
                     style: TextStyle(color: AppTheme.textPrimary),
                   ),
                   trailing: Switch(
@@ -164,12 +203,12 @@ class _HomeScreenState extends State<HomeScreen>
                           context: context,
                           builder: (ctx) => AlertDialog(
                             backgroundColor: AppTheme.surfaceDark,
-                            title: const Text(
-                              'Emin misiniz?',
+                            title: Text(
+                              Localization.t('settings.are_you_sure'),
                               style: TextStyle(color: AppTheme.textPrimary),
                             ),
-                            content: const Text(
-                              'Bu veri sizinle asla ilişkilendirilemez. Tek amacı uygulamanın günlük kullanım sayısını öğrenmektir.\n\nGönderilen örnek ping:\n{\n  "uid": "123e4567-e89b-12d3...",\n  "timestamp": "2026-05-25T14:30:00",\n  "app": "okey_defteri",\n  "event": "app_opened_daily",\n  "platform": "mobile" // veya "web"\n}',
+                            content: Text(
+                              Localization.t('settings.telemetry_message'),
                               style: TextStyle(
                                 color: AppTheme.textSecondary,
                                 fontSize: 13,
@@ -178,8 +217,8 @@ class _HomeScreenState extends State<HomeScreen>
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(ctx, true),
-                                child: const Text(
-                                  'Yine de Kapat',
+                                child: Text(
+                                  Localization.t('settings.disable_anyway'),
                                   style: TextStyle(
                                     color: AppTheme.warningOrange,
                                   ),
@@ -190,8 +229,8 @@ class _HomeScreenState extends State<HomeScreen>
                                   backgroundColor: AppTheme.accentGold,
                                 ),
                                 onPressed: () => Navigator.pop(ctx, false),
-                                child: const Text(
-                                  'Açık Kalsın',
+                                child: Text(
+                                  Localization.t('settings.keep_enabled'),
                                   style: TextStyle(
                                     color: AppTheme.backgroundDark,
                                   ),
@@ -214,11 +253,31 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 ListTile(
                   leading: const Icon(
+                    Icons.face_retouching_off,
+                    color: AppTheme.accentGold,
+                  ),
+                  title: Text(
+                    Localization.t('settings.toxic_nicknames'),
+                    style: TextStyle(color: AppTheme.textPrimary),
+                  ),
+                  trailing: Switch(
+                    value: isToxicNicknamesEnabled,
+                    onChanged: (v) async {
+                      await SettingsService.setToxicNicknamesEnabled(v);
+                      setBottomSheetState(() {
+                        isToxicNicknamesEnabled = v;
+                      });
+                    },
+                    activeThumbColor: AppTheme.accentGold,
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(
                     Icons.info_outline,
                     color: AppTheme.accentGold,
                   ),
-                  title: const Text(
-                    'Uygulama Hakkında',
+                  title: Text(
+                    Localization.t('settings.about'),
                     style: TextStyle(color: AppTheme.textPrimary),
                   ),
                   onTap: () {
@@ -231,8 +290,8 @@ class _HomeScreenState extends State<HomeScreen>
                     Icons.import_export,
                     color: AppTheme.accentGold,
                   ),
-                  title: const Text(
-                    'Verileri İçe/Dışa Aktar',
+                  title: Text(
+                    Localization.t('settings.import_export'),
                     style: TextStyle(color: AppTheme.textPrimary),
                   ),
                   onTap: () {
@@ -258,8 +317,8 @@ class _HomeScreenState extends State<HomeScreen>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.surfaceDark,
-        title: const Text(
-          'Verileri İçe/Dışa Aktar',
+        title: Text(
+          Localization.t('settings.import_export'),
           style: TextStyle(color: AppTheme.textPrimary),
         ),
         content: SizedBox(
@@ -278,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen>
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              hintText: 'JSON verisini buraya yapıştırın',
+              hintText: Localization.t('settings.import_export_info'),
             ),
           ),
         ),
@@ -287,11 +346,13 @@ class _HomeScreenState extends State<HomeScreen>
             onPressed: () {
               Clipboard.setData(ClipboardData(text: controller.text));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Tüm veriler kopyalandı')),
+                SnackBar(
+                  content: Text(Localization.t('settings.all_data_copied')),
+                ),
               );
             },
-            child: const Text(
-              'Tümünü Kopyala',
+            child: Text(
+              Localization.t('settings.copy_all'),
               style: TextStyle(color: AppTheme.accentGold),
             ),
           ),
@@ -312,20 +373,24 @@ class _HomeScreenState extends State<HomeScreen>
                 if (mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Veriler başarıyla güncellendi'),
+                    SnackBar(
+                      content: Text(
+                        Localization.t('settings.data_successfully_updated'),
+                      ),
                     ),
                   );
                   OkeyDefteriApp.restartApp(context);
                 }
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Hata: Geçersiz JSON formatı')),
+                  SnackBar(
+                    content: Text(Localization.t('settings.invalid_json')),
+                  ),
                 );
               }
             },
-            child: const Text(
-              'Kaydet',
+            child: Text(
+              Localization.t('common.save'),
               style: TextStyle(
                 color: AppTheme.backgroundDark,
                 fontWeight: FontWeight.bold,
@@ -365,8 +430,8 @@ class _HomeScreenState extends State<HomeScreen>
                       // Ana butonlar
                       _buildMainButton(
                         icon: Icons.add_circle_rounded,
-                        label: 'Yeni Oyun',
-                        subtitle: 'Yeni bir 101 oyunu başlat',
+                        label: Localization.t('home.new_game'),
+                        subtitle: Localization.t('home.new_game_subtitle'),
                         gradient: AppTheme.goldGradient,
                         textColor: Colors.black,
                         onTap: () {
@@ -382,8 +447,11 @@ class _HomeScreenState extends State<HomeScreen>
 
                       _buildMainButton(
                         icon: Icons.history_rounded,
-                        label: 'Geçmiş Oyunlar',
-                        subtitle: '$_totalGames oyun kayıtlı',
+                        label: Localization.t('home.past_games'),
+                        subtitle: Localization.t(
+                          'home.past_games_info',
+                          args: [_totalGames],
+                        ),
                         gradient: const LinearGradient(
                           colors: [
                             AppTheme.surfaceCard,
@@ -479,8 +547,8 @@ class _HomeScreenState extends State<HomeScreen>
         ShaderMask(
           shaderCallback: (bounds) =>
               AppTheme.goldGradient.createShader(bounds),
-          child: const Text(
-            'OKEY 101',
+          child: Text(
+            Localization.t('home.okey_defteri'),
             style: TextStyle(
               color: Colors.white,
               fontSize: 42,
@@ -497,15 +565,6 @@ class _HomeScreenState extends State<HomeScreen>
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: AppTheme.accentGold.withValues(alpha: 0.2),
-            ),
-          ),
-          child: const Text(
-            'PREMIUM SKOR DEFTERİ',
-            style: TextStyle(
-              color: AppTheme.accentGold,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 2.5,
             ),
           ),
         ),
@@ -583,8 +642,8 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                           ),
                           const SizedBox(width: 8),
-                          const Text(
-                            'Devam Eden Oyun',
+                          Text(
+                            Localization.t('home.active_game'),
                             style: TextStyle(
                               color: AppTheme.accentGold,
                               fontSize: 14,
@@ -743,8 +802,8 @@ class _HomeScreenState extends State<HomeScreen>
                 size: 20,
               ),
               const SizedBox(width: 10),
-              const Text(
-                'Hızlı İpuçları',
+              Text(
+                Localization.t('home.quick_tips'),
                 style: TextStyle(
                   color: AppTheme.accentGold,
                   fontSize: 14,
@@ -755,16 +814,19 @@ class _HomeScreenState extends State<HomeScreen>
             ],
           ),
           const SizedBox(height: 16),
-          _infoRow(Icons.touch_app_rounded, 'Oyuncuya dokunarak puan ekle'),
+          _infoRow(
+            Icons.touch_app_rounded,
+            Localization.t('home.quick_tips_1'),
+          ),
           const SizedBox(height: 12),
-          _infoRow(Icons.undo_rounded, 'Uzun basarak son puanı geri al'),
+          _infoRow(Icons.undo_rounded, Localization.t('home.quick_tips_2')),
           const SizedBox(height: 12),
           _infoRow(
             Icons.calculate_rounded,
-            'Hesap makinesi ile kalan taşları hesapla',
+            Localization.t('home.quick_tips_3'),
           ),
           const SizedBox(height: 12),
-          _infoRow(Icons.groups_rounded, 'Karşılıklı oturanlar takım arkadaşı'),
+          _infoRow(Icons.groups_rounded, Localization.t('home.quick_tips_4')),
         ],
       ),
     );

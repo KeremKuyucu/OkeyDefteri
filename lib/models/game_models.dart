@@ -1,3 +1,7 @@
+import 'package:okey_defteri/services/settings_service.dart';
+
+import '../services/localization_service.dart';
+
 /// Skor giriş türleri
 enum ScoreType {
   islekAtti, // +101 İşlek attı
@@ -17,27 +21,27 @@ extension ScoreTypeExtension on ScoreType {
   String get label {
     switch (this) {
       case ScoreType.islekAtti:
-        return 'İşlek Attı';
+        return Localization.t('score_types.islek_atti');
       case ScoreType.okeyAtti:
-        return 'Okey Attı';
+        return Localization.t('score_types.okey_atti');
       case ScoreType.okeyiniAldilar:
-        return 'Okeyini Aldılar';
+        return Localization.t('score_types.okeyini_aldilar');
       case ScoreType.yanlisElActi:
-        return 'Yanlış El Açtı';
+        return Localization.t('score_types.yanlis_el_acti');
       case ScoreType.normalBitti:
-        return 'Normal Bitti';
+        return Localization.t('score_types.normal_bitti');
       case ScoreType.eldenBitti:
-        return 'Elden Bitti';
+        return Localization.t('score_types.elden_bitti');
       case ScoreType.okeyAtarakBitti:
-        return 'Okey Atarak Bitti';
+        return Localization.t('score_types.okey_atarak_bitti');
       case ScoreType.okeyAtarakEldenBitti:
-        return 'Okey Atarak Elden Bitti';
+        return Localization.t('score_types.okey_atarak_elden_bitti');
       case ScoreType.acamadi:
-        return 'Açamadı';
+        return Localization.t('score_types.acamadi');
       case ScoreType.attigiTasiAldilar:
-        return 'Attığı Taşı Aldılar';
+        return Localization.t('score_types.attigi_tasi_aldilar');
       case ScoreType.eldeKalanTaslar:
-        return 'Elde Kalan Taşlar';
+        return Localization.t('score_types.elde_kalan_taslar');
     }
   }
 
@@ -118,9 +122,9 @@ extension ScoreTypeExtension on ScoreType {
   String get causedByLabel {
     switch (this) {
       case ScoreType.okeyiniAldilar:
-        return 'Okeyini kim aldı?';
+        return Localization.t('score_types.caused_by_okeyini_aldilar');
       case ScoreType.attigiTasiAldilar:
-        return 'Attığı taşı kim aldı?';
+        return Localization.t('score_types.caused_by_attigi_tasi_aldilar');
       default:
         return '';
     }
@@ -221,8 +225,10 @@ class Player {
     return breakdown;
   }
 
-  /// Oyuncunun mevcut oyun istatistiklerine göre dinamik, aşırı toksik + erotik lakap üretir
+  /// Oyuncunun mevcut oyun istatistiklerine göre dinamik lakap üretir
   String getNickname(List<Player> allPlayers, int roundNumber) {
+    if (!SettingsService.getToxicNicknamesEnabled()) return '';
+
     final scores = this.scores;
     final totalScore = this.totalScore;
 
@@ -242,6 +248,7 @@ class Player {
     int okeyAtti = scores.where((s) => s.type == ScoreType.okeyAtti).length;
     int yanlisEl = scores.where((s) => s.type == ScoreType.yanlisElActi).length;
     int acamadi = scores.where((s) => s.type == ScoreType.acamadi).length;
+
     int okeyiniAldilar = scores
         .where((s) => s.type == ScoreType.okeyiniAldilar)
         .length;
@@ -275,44 +282,40 @@ class Player {
     final isSinking =
         recentScores.where((s) => s.effectivePoints > 0).length >= 3;
 
-    final winLossRatio = toplamCeza > 0
-        ? toplamBitirme / toplamCeza
-        : (toplamBitirme > 0 ? 99.0 : 0.0);
-
     // ============================================================
     // ERKEN OYUN
     // ============================================================
     if (roundNumber <= 3) {
-      if (yanlisEl >= 2) return '🤦‍♂️ Daha ilk el amk malı, niye geldin ki?';
-      if (okeyAtti >= 1) return '🃏 Okeyi götüne sokup attı orospu';
-      if (islekAtti >= 1) return '🫠 Eli kaydı, amına koduğumun salak';
-      if (okeyiniAldilar >= 1) return '😤 İlk elde okeyini siktirdin mi piç?';
+      if (yanlisEl >= 2) return Localization.t('nicknames.early_yanlis_el');
+      if (okeyAtti >= 1) return Localization.t('nicknames.early_okey_atti');
+      if (islekAtti >= 1) return Localization.t('nicknames.early_islek_atti');
+      if (okeyiniAldilar >= 1) return Localization.t('nicknames.early_okeyini_aldilar');
 
-      if (okeyEldenBitti >= 1) return '👑🔥 Götünden okey sokup kral oldu';
-      if (okeyBitti >= 1) return '⚡ Okeyi amına koyup patlattı';
-      if (penaltiesCaused >= 1) return '😈 Rakibin okeyini zorla götüne soktu';
+      if (okeyEldenBitti >= 1) return Localization.t('nicknames.early_okey_elden_bitti');
+      if (okeyBitti >= 1) return Localization.t('nicknames.early_okey_bitti');
+      if (penaltiesCaused >= 1) return Localization.t('nicknames.early_penalties_caused');
 
-      if (isLeader) return '🚀 Masaya roket gibi girdi, hepinizi sikecek';
-      if (isLast) return '🐌 Yarrak gibi başladın yine, klasik';
-      return '🃏 Yeni gelen amatör yarrak';
+      if (isLeader) return Localization.t('nicknames.early_leader');
+      if (isLast) return Localization.t('nicknames.early_last');
+      return Localization.t('nicknames.early_default');
     }
 
     // ============================================================
     // ORTA OYUN
     // ============================================================
     if (roundNumber <= 7) {
-      if (yanlisEl >= 3) return '🤡 El açma fahişesi, amk';
-      if (acamadi >= 4) return '🧱 Beton göt, hâlâ açamıyor orospu';
-      if ((islekAtti + okeyAtti) >= 4) return '🎁 Herkesin amına taş dağıtıyor';
+      if (yanlisEl >= 3) return Localization.t('nicknames.mid_yanlis_el');
+      if (acamadi >= 4) return Localization.t('nicknames.mid_acamadi');
+      if ((islekAtti + okeyAtti) >= 4) return Localization.t('nicknames.mid_tas_dagitma');
 
-      if (isLast && scoreDiff > 250) return '💸 Masanın top orospusu, para yiyor';
-      if (okeyEldenBitti >= 1) return '💎 Okeyi götüne sokup efsane bitirdi';
-      if (penaltiesCaused >= 4) return '🏹 Rakibin götünü yırtarak okey çalıyor';
-      if (penaltiesReceived >= 3) return '🎯 Herkesin sikiştiği ortak fahişe';
-      if (isOnFire) return '🔥 Amına kodumun seri katili, yakıyor';
-      if (isLeader) return '😈 Masanın dominantı, hepinizin amına koyuyor';
+      if (isLast && scoreDiff > 250) return Localization.t('nicknames.mid_last_far');
+      if (okeyEldenBitti >= 1) return Localization.t('nicknames.mid_okey_elden_bitti');
+      if (penaltiesCaused >= 4) return Localization.t('nicknames.mid_penalties_caused');
+      if (penaltiesReceived >= 3) return Localization.t('nicknames.mid_penalties_received');
+      if (isOnFire) return Localization.t('nicknames.mid_on_fire');
+      if (isLeader) return Localization.t('nicknames.mid_leader');
 
-      return '🃏 Orta oyunda hâlâ götü boklu geziniyor';
+      return Localization.t('nicknames.mid_default');
     }
 
     // ============================================================
@@ -320,30 +323,34 @@ class Player {
     // ============================================================
 
     // Felaketler
-    if (yanlisEl >= 4) return '🤡 Yanlış el kraliçesi, amına koduğumun geri zekalısı';
-    if (acamadi >= 5) return '🧱 Taş gibi göt, hâlâ el açamıyor piç';
-    if (okeyiniAldilar >= 3) return '😩 Okeyini herkesin götüne sokturuyor';
+    if (yanlisEl >= 4) return Localization.t('nicknames.late_yanlis_el');
+    if (acamadi >= 5) return Localization.t('nicknames.late_acamadi');
+    if (okeyiniAldilar >= 3) return Localization.t('nicknames.late_okeyini_aldilar');
 
     // İyi olanlar (zorba + erotik)
-    if (penaltiesCaused >= 6) return '🏹 Okey avcısı, rakibin götünü parçalayan ibne';
-    if (okeyEldenBitti >= 2) return '👑 Götünden okey sokarak tahtı sikti';
-    if (okeyBitti >= 4) return '🚬 Masayı siker gibi yaktı, kül etti';
-    if (eldenBitti >= 3) return '🥷 Sessizce gelip hepinizin götünden bitiriyor';
+    if (penaltiesCaused >= 6) return Localization.t('nicknames.late_penalties_caused');
+    if (okeyEldenBitti >= 2) return Localization.t('nicknames.late_okey_elden_bitti');
+    if (okeyBitti >= 4) return Localization.t('nicknames.late_okey_bitti');
+    if (eldenBitti >= 3) return Localization.t('nicknames.late_elden_bitti');
 
-    if (isOnFire && isLeader) return '🔥 Durdurulamayan am canavarı, masayı sikiyor';
-    if (winLossRatio >= 3.0 && isLeader) return '🏆 Masanın siki, tartışmasız dominant';
+    if (isOnFire && isLeader) return Localization.t('nicknames.late_on_fire_leader');
+
+    final double winLossRatio = (roundNumber - toplamBitirme) > 0 
+        ? (toplamBitirme / (roundNumber - toplamBitirme)) 
+        : toplamBitirme.toDouble();
+    if (winLossRatio >= 3.0 && isLeader) return Localization.t('nicknames.late_win_ratio_leader');
 
     // Puan durumu
-    if (isLast && totalScore > 700) return '💸 Masanın sokulan orospusu, para yiyor';
-    if (isLast) return '📉 Götü boklu sonuncu, yine yedin amk';
+    if (isLast && totalScore > 700) return Localization.t('nicknames.late_last_very_far');
+    if (isLast) return Localization.t('nicknames.late_last');
 
-    if (isLeader && totalScore < -500) return '🕶️ Masanın mutlak sikici kralı';
-    if (isLeader) return '😈 Hepinizin amına koyuyorum, önde geziyorum';
+    if (isLeader && totalScore < -500) return Localization.t('nicknames.late_leader_very_far');
+    if (isLeader) return Localization.t('nicknames.late_leader');
 
-    if (totalScore > 500) return '🥵 Defibrilatörle amını kurtaralım kral';
-    if (totalScore > 300) return '😮‍💨 Götün yanıyor ama hâlâ dayanıyorsun';
+    if (totalScore > 500) return Localization.t('nicknames.late_score_500');
+    if (totalScore > 300) return Localization.t('nicknames.late_score_300');
 
-    return '🃏 Amatör göt, hâlâ bir şey yapamadın';
+    return Localization.t('nicknames.late_default');
   }
 
   Map<String, dynamic> toJson() => {
