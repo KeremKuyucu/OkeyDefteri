@@ -1,6 +1,7 @@
 /// Skor giriş türleri
 enum ScoreType {
   islekAtti, // +101 İşlek attı
+  okeyAtti, // +101 Okey attı
   okeyiniAldilar, // +101 Okeyini aldılar
   yanlisElActi, // +101 Yanlış el açtı
   normalBitti, // -101 Normal bitti (elle kapattı)
@@ -17,6 +18,8 @@ extension ScoreTypeExtension on ScoreType {
     switch (this) {
       case ScoreType.islekAtti:
         return 'İşlek Attı';
+      case ScoreType.okeyAtti:
+        return 'Okey Attı';
       case ScoreType.okeyiniAldilar:
         return 'Okeyini Aldılar';
       case ScoreType.yanlisElActi:
@@ -42,6 +45,8 @@ extension ScoreTypeExtension on ScoreType {
     switch (this) {
       case ScoreType.islekAtti:
         return '🎯';
+      case ScoreType.okeyAtti:
+        return '🃏❌';
       case ScoreType.okeyiniAldilar:
         return '🃏';
       case ScoreType.yanlisElActi:
@@ -66,6 +71,8 @@ extension ScoreTypeExtension on ScoreType {
   int get defaultPoints {
     switch (this) {
       case ScoreType.islekAtti:
+        return 101;
+      case ScoreType.okeyAtti:
         return 101;
       case ScoreType.okeyiniAldilar:
         return 101;
@@ -214,126 +221,129 @@ class Player {
     return breakdown;
   }
 
-  /// Oyuncunun mevcut oyun istatistiklerine göre dinamik bir lakap (nickname) üretir
+  /// Oyuncunun mevcut oyun istatistiklerine göre dinamik, aşırı toksik + erotik lakap üretir
   String getNickname(List<Player> allPlayers, int roundNumber) {
     final scores = this.scores;
     final totalScore = this.totalScore;
 
-    // İstatistiksel veriler
     int okeyBitti = scores
         .where((s) => s.type == ScoreType.okeyAtarakBitti)
         .length;
+    int okeyEldenBitti = scores
+        .where((s) => s.type == ScoreType.okeyAtarakEldenBitti)
+        .length;
     int eldenBitti = scores.where((s) => s.type == ScoreType.eldenBitti).length;
+    int normalBitti = scores
+        .where((s) => s.type == ScoreType.normalBitti)
+        .length;
+    int toplamBitirme = okeyBitti + okeyEldenBitti + eldenBitti + normalBitti;
+
     int islekAtti = scores.where((s) => s.type == ScoreType.islekAtti).length;
+    int okeyAtti = scores.where((s) => s.type == ScoreType.okeyAtti).length;
     int yanlisEl = scores.where((s) => s.type == ScoreType.yanlisElActi).length;
     int acamadi = scores.where((s) => s.type == ScoreType.acamadi).length;
+    int okeyiniAldilar = scores
+        .where((s) => s.type == ScoreType.okeyiniAldilar)
+        .length;
+    int toplamCeza = islekAtti + okeyAtti + yanlisEl + acamadi + okeyiniAldilar;
 
-    // Ceza analizi
     int penaltiesCaused = 0;
     int penaltiesReceived = scores
         .where((s) => s.causedByPlayerId != null && s.causedByPlayerId != id)
         .length;
+
     for (final p in allPlayers) {
       if (p.id == id) continue;
       penaltiesCaused += p.scores.where((s) => s.causedByPlayerId == id).length;
     }
 
-    // Sıralama analizi
     final sorted = List<Player>.from(allPlayers)
       ..sort((a, b) => a.totalScore.compareTo(b.totalScore));
-    final myRank = sorted.indexWhere(
-      (p) => p.id == id,
-    ); // 0 = birinci (en az puan)
+    final myRank = sorted.indexWhere((p) => p.id == id);
     final isLeader = myRank == 0;
     final isLast = myRank == sorted.length - 1;
     final isSecondLast = myRank == sorted.length - 2;
 
-    // Birinci ile fark
-    final leaderScore = sorted.first.totalScore;
-    final scoreDiff = totalScore - leaderScore; // pozitif = geride
+    final scoreDiff = totalScore - sorted.first.totalScore;
+    final diffFromLast = sorted.last.totalScore - totalScore;
 
-    // Erken oyun (1-3 el) — hafif dokunuşlar
+    final recentScores = scores.length >= 3
+        ? scores.sublist(scores.length - 3)
+        : scores;
+    final isOnFire =
+        recentScores.where((s) => s.effectivePoints < 0).length >= 3;
+    final isSinking =
+        recentScores.where((s) => s.effectivePoints > 0).length >= 3;
+
+    final winLossRatio = toplamCeza > 0
+        ? toplamBitirme / toplamCeza
+        : (toplamBitirme > 0 ? 99.0 : 0.0);
+
+    // ============================================================
+    // ERKEN OYUN
+    // ============================================================
     if (roundNumber <= 3) {
-      if (yanlisEl >= 1) return '🤨 Acemi misin';
-      if (islekAtti >= 1) return '🎁 Eli Açık';
-      if (acamadi >= 2) return '🧐 Çalışıyor...';
-      if (okeyBitti >= 1) return '⚡ Hızlı Başlangıç';
-      if (eldenBitti >= 1) return '🤫 Sessiz Tehlike';
-      if (isLeader) return '📈 Şimdilik Önde';
-      if (isLast) return '🐌 Isınıyor';
-      return '🃏 Oyuncu';
+      if (yanlisEl >= 2) return '🤦‍♂️ Daha ilk el amk malı, niye geldin ki?';
+      if (okeyAtti >= 1) return '🃏 Okeyi götüne sokup attı orospu';
+      if (islekAtti >= 1) return '🫠 Eli kaydı, amına koduğumun salak';
+      if (okeyiniAldilar >= 1) return '😤 İlk elde okeyini siktirdin mi piç?';
+
+      if (okeyEldenBitti >= 1) return '👑🔥 Götünden okey sokup kral oldu';
+      if (okeyBitti >= 1) return '⚡ Okeyi amına koyup patlattı';
+      if (penaltiesCaused >= 1) return '😈 Rakibin okeyini zorla götüne soktu';
+
+      if (isLeader) return '🚀 Masaya roket gibi girdi, hepinizi sikecek';
+      if (isLast) return '🐌 Yarrak gibi başladın yine, klasik';
+      return '🃏 Yeni gelen amatör yarrak';
     }
 
-    // Orta oyun (4-7 el) — dişler görünmeye başlar
+    // ============================================================
+    // ORTA OYUN
+    // ============================================================
     if (roundNumber <= 7) {
-      if (yanlisEl >= 3) return '🤡 El Açma Uzmanı';
-      if (yanlisEl >= 2) return '💀 İki Kez Mahvoldu';
-      if (islekAtti >= 3) return '🎪 Hayır Kurumu Başkanı';
-      if (acamadi >= 4) return '🧱 Beton Kafası';
-      if (isLast && scoreDiff > 200) return '🚑 Ambulans Çağırın';
-      if (isLast && scoreDiff > 100) return '💸 Para Yakıyor';
-      if (okeyBitti >= 3) return '🎰 Slotuna Basan';
-      if (okeyBitti >= 2) return '🔫 İki El Ateş';
-      if (eldenBitti >= 2) return '👻 Görünmez Bıçak';
-      if (penaltiesCaused >= 4) return '☠️ Tablo Katili';
-      if (penaltiesCaused >= 2) return '🐍 Zehirli Dil';
-      if (penaltiesReceived >= 3) return '🎯 Herkesin Hedefi';
-      if (isLeader && scoreDiff < -150) return '🦅 Tepede Tek';
-      if (isLeader) return '😏 Şimdilik Güvendeyim';
-      if (isSecondLast) return '😰 Kıl Payı';
-      return '🃏 Orta Yerde';
+      if (yanlisEl >= 3) return '🤡 El açma fahişesi, amk';
+      if (acamadi >= 4) return '🧱 Beton göt, hâlâ açamıyor orospu';
+      if ((islekAtti + okeyAtti) >= 4) return '🎁 Herkesin amına taş dağıtıyor';
+
+      if (isLast && scoreDiff > 250) return '💸 Masanın top orospusu, para yiyor';
+      if (okeyEldenBitti >= 1) return '💎 Okeyi götüne sokup efsane bitirdi';
+      if (penaltiesCaused >= 4) return '🏹 Rakibin götünü yırtarak okey çalıyor';
+      if (penaltiesReceived >= 3) return '🎯 Herkesin sikiştiği ortak fahişe';
+      if (isOnFire) return '🔥 Amına kodumun seri katili, yakıyor';
+      if (isLeader) return '😈 Masanın dominantı, hepinizin amına koyuyor';
+
+      return '🃏 Orta oyunda hâlâ götü boklu geziniyor';
     }
 
-    // Geç oyun (8+ el) — acımasız değerlendirme
-    // 1. Tarihi Felaketler
-    if (yanlisEl >= 4) return '🤡 Sirk Direktörü';
-    if (yanlisEl >= 3) return '🤡 Milli Rezalet';
-    if (yanlisEl >= 2 && isLast) return '💩 İki Kere Battı Bir Kere Görür';
-    if (yanlisEl >= 2) return '🤡 Sirk Maymunu';
+    // ============================================================
+    // GEÇ OYUN (En sert kısım)
+    // ============================================================
 
-    if (isLast && totalScore > 600) return '🏦 Banka Mı Açtın';
-    if (isLast && totalScore > 400) return '💸 Sponsor';
-    if (isLast && scoreDiff > 300) return '🌍 Başka Bir Oyundan Geliyor';
+    // Felaketler
+    if (yanlisEl >= 4) return '🤡 Yanlış el kraliçesi, amına koduğumun geri zekalısı';
+    if (acamadi >= 5) return '🧱 Taş gibi göt, hâlâ el açamıyor piç';
+    if (okeyiniAldilar >= 3) return '😩 Okeyini herkesin götüne sokturuyor';
 
-    if (islekAtti >= 4) return '🎪 Martaval Dağıtım A.Ş.';
-    if (islekAtti >= 3) return '🎁 Sevgili Baba Noel';
-    if (islekAtti >= 2 && penaltiesReceived >= 2) return '😭 Hem Attı Hem Yedi';
+    // İyi olanlar (zorba + erotik)
+    if (penaltiesCaused >= 6) return '🏹 Okey avcısı, rakibin götünü parçalayan ibne';
+    if (okeyEldenBitti >= 2) return '👑 Götünden okey sokarak tahtı sikti';
+    if (okeyBitti >= 4) return '🚬 Masayı siker gibi yaktı, kül etti';
+    if (eldenBitti >= 3) return '🥷 Sessizce gelip hepinizin götünden bitiriyor';
 
-    if (acamadi >= 5) return '🧱 Duvar Ustası Usta';
-    if (acamadi >= 3 && islekAtti >= 2) return '🪨 Kaya Gibi Oturdu';
-    if (acamadi >= 3) return '🧱 Beton';
+    if (isOnFire && isLeader) return '🔥 Durdurulamayan am canavarı, masayı sikiyor';
+    if (winLossRatio >= 3.0 && isLeader) return '🏆 Masanın siki, tartışmasız dominant';
 
-    // 2. Agresif & Dominans
-    if (okeyBitti >= 4) return '🚬 Masayı Yakan';
-    if (okeyBitti >= 3 && isLeader) return '💣 Bomba';
-    if (okeyBitti >= 2 && isLeader) return '🚬 Masayı Dağıtan';
-    if (okeyBitti >= 2) return '🎯 Tetikçi';
+    // Puan durumu
+    if (isLast && totalScore > 700) return '💸 Masanın sokulan orospusu, para yiyor';
+    if (isLast) return '📉 Götü boklu sonuncu, yine yedin amk';
 
-    if (eldenBitti >= 3) return '💨 Var mıydı Yok muydu';
-    if (eldenBitti >= 2 && isLeader) return '🥷 Suikastçı';
-    if (eldenBitti >= 2) return '👻 Hayalet';
+    if (isLeader && totalScore < -500) return '🕶️ Masanın mutlak sikici kralı';
+    if (isLeader) return '😈 Hepinizin amına koyuyorum, önde geziyorum';
 
-    if (penaltiesCaused >= 5) return '☠️ Katliam Makinesi';
-    if (penaltiesCaused >= 3 && isLeader) return '😈 Şeytan';
-    if (penaltiesCaused >= 3) return '🐍 Engerek';
-    if (penaltiesCaused >= 2 && penaltiesReceived == 0) return '🕵️ Dokunulmaz';
+    if (totalScore > 500) return '🥵 Defibrilatörle amını kurtaralım kral';
+    if (totalScore > 300) return '😮‍💨 Götün yanıyor ama hâlâ dayanıyorsun';
 
-    // 3. Puan durumu
-    if (isLeader && totalScore < -300) return '🕶️ Kral';
-    if (isLeader && totalScore < -150) return '🕶️ Masa Ağası';
-    if (isLeader && scoreDiff < -200) return '🏆 Tek';
-    if (isLeader) return '😤 Önde Ama Rahat Değil';
-
-    if (totalScore < -100) return '🔥 Alev Alev';
-    if (totalScore < 0) return '🔥 Formunda';
-    if (totalScore > 500) return '🫁 Suni Solunum';
-    if (totalScore > 300) return '🥵 Defibrilatör Lazım';
-    if (totalScore > 200) return '😮‍💨 Oksijen Tüpü Lazım';
-
-    if (isLast) return '📉 Dönüşü Olmayan Yol';
-    if (isSecondLast) return '🙏 Sondan Bir Önceki';
-
-    return '🃏 Oyuncu';
+    return '🃏 Amatör göt, hâlâ bir şey yapamadın';
   }
 
   Map<String, dynamic> toJson() => {

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SettingsService {
   static const String _vibrationKey = 'vibration_enabled';
   static const String _soundKey = 'sound_enabled';
+  static const String _telemetryKey = 'telemetry_enabled';
 
   static Future<bool> getVibrationEnabled() async {
     final prefs = await SharedPreferences.getInstance();
@@ -24,6 +25,16 @@ class SettingsService {
   static Future<void> setSoundEnabled(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_soundKey, value);
+  }
+
+  static Future<bool> getTelemetryEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_telemetryKey) ?? true;
+  }
+
+  static Future<void> setTelemetryEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_telemetryKey, value);
   }
 }
 

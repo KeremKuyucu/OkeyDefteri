@@ -1,0 +1,422 @@
+#requires -version 5.1
+<#
+.SYNOPSIS
+    Okey Defteri - Otomatik Build ve Dagit (Web / APK)
+.DESCRIPTION
+    Flutter projesini secilen platformlar icin derler, web build'i Vercel CLI ile deploy eder ve opsiyonel GitHub Release yapar.
+.NOTES
+    Proje kokunde calistirilmalidir.
+#>
+
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+# -- Renk & Log Yardimcilari -------------------------------------------------------
+function Write-Step   ([string]$msg) { Write-Host "`n>> $msg" -ForegroundColor Cyan }
+function Write-Info   ([string]$msg) { Write-Host "   [i] $msg" -ForegroundColor DarkGray }
+function Write-Ok     ([string]$msg) { Write-Host "   [OK] $msg" -ForegroundColor Green }
+function Write-Warn   ([string]$msg) { Write-Host "   [!] $msg" -ForegroundColor Yellow }
+function Write-Err    ([string]$msg) { Write-Host "   [X] $msg" -ForegroundColor Red }
+
+# -- Islem Suresi Olcumu -----------------------------------------------------------
+function Format-Elapsed ([TimeSpan]$ts) {
+    if ($ts.TotalMinutes -ge 1) {
+        return "{0:N0}dk {1:N0}sn" -f $ts.TotalMinutes, $ts.Seconds
+    }
+    return "{0:N1}sn" -f $ts.TotalSeconds
+}
+
+try {
+    $scriptStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+    # -- 0) Yapilandirma -----------------------------------------------------------
+    $projectRoot = $PSScriptRoot
+    Set-Location $projectRoot
+
+    $distPath = "C:\Users\Kerem\Projects\Outputs"
+
+    # Vercel CLI
+    $vercelCmd = "vercel"
+
+    # -- Yardimci Fonksiyonlar -----------------------------------------------------
+    function Ensure-Dir ([string]$path) {
+        if (-not (Test-Path $path)) {
+            New-Item -ItemType Directory -Path $path -Force | Out-Null
+        }
+    }
+
+    function Escape-ProcessArg ([string]$arg) {
+        if ($arg -match '\s') {
+            return "`"$arg`""
+        }
+        return $arg
+    }
+
+    function Run-Exe {
+        param(
+            [Parameter(Mandatory = $true)][string]$FilePath,
+            [Parameter(Mandatory = $false)][string[]]$ArgumentList = @(),
+            [Parameter(Mandatory = $false)][string]$WorkingDirectory = $projectRoot,
+            [Parameter(Mandatory = $false)][switch]$AllowNonZero
+        )
+
+        $resolvedPath = $FilePath
+        $prependArgs  = @()
+        $cmd = Get-Command $FilePath -ErrorAction SilentlyContinue
+        if ($cmd) {
+            $resolvedPath = $cmd.Source
+            if ($resolvedPath -match '\.(bat|cmd)$') {
+                $prependArgs  = @("/c", $resolvedPath)
+                $resolvedPath = "$env:SystemRoot\System32\cmd.exe"
+            }
+        }
+
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName               = $resolvedPath
+        $psi.WorkingDirectory       = $WorkingDirectory
+        $psi.UseShellExecute        = $false
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError  = $true
+        $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+        $psi.StandardErrorEncoding  = [System.Text.Encoding]::UTF8
+
+        $allArgs = $prependArgs + $ArgumentList
+        if ($allArgs.Count -gt 0) {
+            $psi.Arguments = ($allArgs | ForEach-Object { Escape-ProcessArg $_ }) -join ' '
+        }
+
+        $proc           = New-Object System.Diagnostics.Process
+        $proc.StartInfo = $psi
+
+        $stdoutBuilder = New-Object System.Text.StringBuilder
+        $stderrBuilder = New-Object System.Text.StringBuilder
+
+        $onStdout = { if ($EventArgs.Data) { [void]$Event.MessageData.AppendLine($EventArgs.Data) } }
+        $onStderr = { if ($EventArgs.Data) { [void]$Event.MessageData.AppendLine($EventArgs.Data) } }
+
+        $stdoutEvent = Register-ObjectEvent -InputObject $proc -EventName OutputDataReceived -Action $onStdout -MessageData $stdoutBuilder
+        $stderrEvent = Register-ObjectEvent -InputObject $proc -EventName ErrorDataReceived  -Action $onStderr -MessageData $stderrBuilder
+
+        Write-Host "   >> $FilePath $($psi.Arguments)" -ForegroundColor DarkGray
+
+        try {
+            [void]$proc.Start()
+            $proc.BeginOutputReadLine()
+            $proc.BeginErrorReadLine()
+            $proc.WaitForExit()
+
+            Start-Sleep -Milliseconds 200
+
+            $stdout = $stdoutBuilder.ToString().TrimEnd()
+            $stderr = $stderrBuilder.ToString().TrimEnd()
+
+            if ($stdout) { Write-Host $stdout }
+            if ($stderr -and $proc.ExitCode -ne 0) {
+                Write-Host $stderr -ForegroundColor Red
+            }
+            elseif ($stderr) {
+                Write-Host $stderr -ForegroundColor DarkYellow
+            }
+
+            if ($proc.ExitCode -ne 0 -and -not $AllowNonZero) {
+                throw "Komut basarisiz (ExitCode=$($proc.ExitCode)): $FilePath $($psi.Arguments)"
+            }
+            return $proc.ExitCode
+        }
+        finally {
+            Unregister-Event -SourceIdentifier $stdoutEvent.Name -ErrorAction SilentlyContinue
+            Unregister-Event -SourceIdentifier $stderrEvent.Name -ErrorAction SilentlyContinue
+            Remove-Job -Id $stdoutEvent.Id -Force -ErrorAction SilentlyContinue
+            Remove-Job -Id $stderrEvent.Id -Force -ErrorAction SilentlyContinue
+            $proc.Dispose()
+        }
+    }
+
+    # -- 1) Versiyon Bilgisi -------------------------------------------------------
+    $pubspecPath    = Join-Path $projectRoot "pubspec.yaml"
+    $currentVersion = $null
+
+    if (Test-Path $pubspecPath) {
+        $versionLine = Get-Content $pubspecPath | Select-String "^\s*version:\s*"
+        if ($versionLine) {
+            $currentVersion = ($versionLine.ToString().Split(":")[1].Trim().Split("+")[0]).Trim()
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($currentVersion)) {
+        Write-Warn "Versiyon bilgisi pubspec.yaml'dan alinamadi."
+        $userInput = Read-Host "Lutfen versiyon numarasini girin (Orn: 1.5.3)"
+        if ([string]::IsNullOrWhiteSpace($userInput)) {
+            throw "HATA: Versiyon girmeden devam edilemez!"
+        }
+        $currentVersion = $userInput.Trim()
+    }
+
+    Ensure-Dir $distPath
+
+    $verPadded = $currentVersion.PadRight(14)
+    Write-Host ""
+    Write-Host "+=======================================================+" -ForegroundColor Cyan
+    Write-Host "| Okey Defteri Build & Deploy - Versiyon $verPadded |" -ForegroundColor Cyan
+    Write-Host "+=======================================================+" -ForegroundColor Cyan
+
+    # -- 2) Platform Secim Menusu --------------------------------------------------
+    function Show-PlatformMenu {
+        $platforms = @(
+            [pscustomobject]@{ Name = "Web"; Command = @("flutter", "build", "web", "--release"); Selected = $true }
+            [pscustomobject]@{ Name = "APK"; Command = @("flutter", "build", "apk", "--release", "--split-per-abi"); Selected = $true }
+        )
+
+        $currentIndex = 0
+        $menuActive   = $true
+
+        Write-Host "`n-- Platform Secimi --" -ForegroundColor Cyan
+        Write-Host "   Yukari/Asagi: Gezinme | Space: Sec/Kaldir | Enter: Onayla" -ForegroundColor DarkGray
+        Write-Host ""
+
+        $menuTop = [Console]::CursorTop
+        for ($i = 0; $i -lt $platforms.Count; $i++) { Write-Host "" }
+
+        while ($menuActive) {
+            [Console]::SetCursorPosition(0, $menuTop)
+
+            for ($i = 0; $i -lt $platforms.Count; $i++) {
+                if ($i -eq $currentIndex) { $prefix = " > " } else { $prefix = "   " }
+                if ($platforms[$i].Selected) { $checkbox = "[X]" } else { $checkbox = "[ ]" }
+                if ($i -eq $currentIndex) { $color = "Yellow" } else { $color = "White" }
+                $line = "{0}{1} {2}" -f $prefix, $checkbox, $platforms[$i].Name
+                Write-Host $line.PadRight(40) -ForegroundColor $color
+            }
+
+            $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+            switch ($key.VirtualKeyCode) {
+                38 { if ($currentIndex -gt 0) { $currentIndex-- } }
+                40 { if ($currentIndex -lt ($platforms.Count - 1)) { $currentIndex++ } }
+                32 { $platforms[$currentIndex].Selected = -not $platforms[$currentIndex].Selected }
+                13 { $menuActive = $false }
+            }
+        }
+
+        Write-Host ""
+        return $platforms | Where-Object { $_.Selected }
+    }
+
+    $selectedPlatforms = Show-PlatformMenu
+    if (-not $selectedPlatforms -or @($selectedPlatforms).Count -eq 0) {
+        Write-Warn "Hicbir platform secilmedi. Cikiliyor..."
+        return
+    }
+
+    $selectedNames = @($selectedPlatforms | ForEach-Object { $_.Name })
+    Write-Ok "Secilen platformlar: $($selectedNames -join ', ')"
+
+    # -- Flutter Clean (Opsiyonel) -------------------------------------------------
+    $doClean = Read-Host "`nOnce 'flutter clean' calistirilsin mi? (e/H)"
+    if ($doClean -match '^[Ee]$') {
+        Write-Step "Flutter Clean"
+        Run-Exe -FilePath "flutter" -ArgumentList @("clean") -WorkingDirectory $projectRoot
+        Run-Exe -FilePath "flutter" -ArgumentList @("pub", "get") -WorkingDirectory $projectRoot
+    }
+
+    # -- 3) Build Surecleri --------------------------------------------------------
+    $buildResults = @{}
+
+    foreach ($platform in @($selectedPlatforms)) {
+        Write-Step "$($platform.Name) Derleniyor..."
+        $sw = [System.Diagnostics.Stopwatch]::StartNew()
+
+        try {
+            $cmdParts = $platform.Command
+            Run-Exe -FilePath $cmdParts[0] -ArgumentList $cmdParts[1..($cmdParts.Count - 1)] -WorkingDirectory $projectRoot
+            $sw.Stop()
+            $buildResults[$platform.Name] = [pscustomobject]@{
+                Elapsed = $sw.Elapsed
+                Success = $true
+                Error   = $null
+            }
+            Write-Ok "$($platform.Name) derlendi - $(Format-Elapsed $sw.Elapsed)"
+        }
+        catch {
+            $sw.Stop()
+            $buildResults[$platform.Name] = [pscustomobject]@{
+                Elapsed = $sw.Elapsed
+                Success = $false
+                Error   = $_.Exception.Message
+            }
+            Write-Err "$($platform.Name) derlemesi basarisiz: $($_.Exception.Message)"
+            throw
+        }
+    }
+
+    # -- 4) APK Kopyalama ----------------------------------------------------------
+    if ($selectedNames -contains "APK") {
+        Write-Step "APK Dosyalari Kopyalaniyor"
+
+        $flutterApkPath = Join-Path $projectRoot "build\app\outputs\apk\release"
+        if (-not (Test-Path $flutterApkPath)) {
+            throw "Kaynak APK yolu bulunamadi: $flutterApkPath"
+        }
+
+        $apkFiles = Get-ChildItem -Path $flutterApkPath -Filter "*.apk" -Recurse
+        if ($apkFiles.Count -eq 0) {
+            Write-Warn "APK dosyasi bulunamadi: $flutterApkPath"
+        }
+
+        foreach ($apk in $apkFiles) {
+            $destFile = Join-Path $distPath $apk.Name
+            Copy-Item -Path $apk.FullName -Destination $destFile -Force
+            $sizeMB = "{0:N2} MB" -f ($apk.Length / 1MB)
+            Write-Info "Kopyalandi: $($apk.Name) ($sizeMB)"
+        }
+    }
+
+    # -- 5) Web Deploy (Vercel CLI) ------------------------------------------------
+    if ($selectedNames -contains "Web") {
+        $webBuildSrc = Join-Path $projectRoot "build\web"
+        if (-not (Test-Path $webBuildSrc)) {
+            throw "Web build ciktisi bulunamadi: $webBuildSrc"
+        }
+
+        $vercelCheck = Get-Command $vercelCmd -ErrorAction SilentlyContinue
+        if (-not $vercelCheck) {
+            throw "Vercel CLI bulunamadi. Kurmak icin: npm i -g vercel"
+        }
+
+        Write-Step "Vercel'e Deploy Ediliyor"
+        Write-Info "Kaynak: $webBuildSrc"
+
+        Run-Exe -FilePath "cmd.exe" `
+            -ArgumentList @("/c", "vercel --prod --yes") `
+            -WorkingDirectory $webBuildSrc
+
+        Write-Ok "Web deploy tamamlandi (Vercel production)."
+    }
+
+    # -- 6) GitHub Release (Opsiyonel) ---------------------------------------------
+    Write-Host ""
+    Write-Host "-- GitHub Release --" -ForegroundColor Cyan
+    $createRelease = Read-Host "   GitHub Release olusturulsun mu? (e/H)"
+
+    if ($createRelease -match '^[Ee]$') {
+        $releaseFiles = @()
+
+        if ($selectedNames -contains "APK") {
+            $apks = Get-ChildItem -Path $distPath -Filter "*.apk" -ErrorAction SilentlyContinue
+            foreach ($apk in $apks) { $releaseFiles += $apk.FullName }
+        }
+
+        if ($releaseFiles.Count -eq 0) {
+            Write-Warn "Release icin yuklenecek dosya bulunamadi."
+        }
+        else {
+            $tagName      = "v$currentVersion"
+            $releaseTitle = "Okey Defteri v$currentVersion"
+
+            Push-Location $projectRoot
+            try {
+                $releaseExists = $false
+                try {
+                    $null = & gh release view $tagName 2>&1
+                    if ($LASTEXITCODE -eq 0) { $releaseExists = $true }
+                }
+                catch { $releaseExists = $false }
+
+                if ($releaseExists) {
+                    Write-Step "Mevcut release'e dosyalar yukleniyor: $tagName"
+                    foreach ($file in $releaseFiles) {
+                        Write-Info "Yukleniyor: $(Split-Path $file -Leaf)"
+                        Run-Exe -FilePath "gh" -ArgumentList @("release", "upload", $tagName, $file, "--clobber") -WorkingDirectory $projectRoot
+                    }
+                    Write-Ok "Dosyalar mevcut release'e yuklendi: $tagName"
+                }
+                else {
+                    Write-Step "Yeni GitHub Release Olusturuluyor"
+
+                    $releaseNotesFile = Join-Path $projectRoot "RELEASE_$currentVersion.md"
+                    $ghArgs           = @("release", "create", $tagName, "--title", $releaseTitle)
+
+                    if (Test-Path $releaseNotesFile) {
+                        Write-Info "Release notu dosyasi bulundu: RELEASE_$currentVersion.md"
+                        $ghArgs += @("--notes-file", $releaseNotesFile)
+                    }
+                    else {
+                        $releaseNotes = Read-Host "   Release notlari (bos birakilabilir)"
+                        if ([string]::IsNullOrWhiteSpace($releaseNotes)) {
+                            $releaseNotes = "Version $currentVersion - $(Get-Date -Format 'yyyy-MM-dd')"
+                        }
+                        $ghArgs += @("--notes", $releaseNotes)
+                    }
+
+                    foreach ($file in $releaseFiles) { $ghArgs += $file }
+
+                    Run-Exe -FilePath "gh" -ArgumentList $ghArgs -WorkingDirectory $projectRoot
+                    Write-Ok "GitHub Release olusturuldu: $tagName"
+                }
+            }
+            catch {
+                Write-Err "GitHub Release islemi basarisiz: $($_.Exception.Message)"
+            }
+            finally {
+                Pop-Location
+            }
+        }
+    }
+
+    # -- Ozet ----------------------------------------------------------------------
+    $scriptStopwatch.Stop()
+
+    Write-Host ""
+    Write-Host "+=======================================================+" -ForegroundColor Green
+    Write-Host "|                     BUILD OZETI                       |" -ForegroundColor Green
+    Write-Host "+=======================================================+" -ForegroundColor Green
+
+    foreach ($name in $buildResults.Keys) {
+        $r       = $buildResults[$name]
+        $status  = if ($r.Success) { "Basarili" } else { "HATALI" }
+        $sColor  = if ($r.Success) { "Green" }    else { "Red" }
+        $elapsed = Format-Elapsed $r.Elapsed
+        $line    = "|  {0,-10}  {1,-12}  {2,-18}  |" -f $name, $status, $elapsed
+        Write-Host $line -ForegroundColor $sColor
+    }
+
+    if (Test-Path $distPath) {
+        $distFiles = Get-ChildItem -Path $distPath -File -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 10
+        if ($distFiles) {
+            Write-Host "+-------------------------------------------------------+" -ForegroundColor Green
+            Write-Host "|  Cikti Dosyalari ($distPath)" -ForegroundColor Green
+            foreach ($f in $distFiles) {
+                if ($f.Name -like "*.apk") {
+                    $sizeMB = "{0:N2} MB" -f ($f.Length / 1MB)
+                    $fLine  = "|    {0,-32} {1,10}" -f $f.Name, $sizeMB
+                    Write-Host $fLine -ForegroundColor White
+                }
+            }
+        }
+    }
+
+    Write-Host "+-------------------------------------------------------+" -ForegroundColor Green
+    $totalLine = "|  Toplam Sure: {0,-38}|" -f (Format-Elapsed $scriptStopwatch.Elapsed)
+    Write-Host $totalLine -ForegroundColor Cyan
+    Write-Host "+=======================================================+" -ForegroundColor Green
+
+    Write-Host ""
+    Write-Ok "Surum $currentVersion yayina hazir!"
+}
+catch {
+    Write-Host ""
+    Write-Host "+=======================================================+" -ForegroundColor Red
+    Write-Host "|              KRITIK HATA                              |" -ForegroundColor Red
+    Write-Host "+=======================================================+" -ForegroundColor Red
+    Write-Host "   $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "   Satir: $($_.InvocationInfo.ScriptLineNumber)" -ForegroundColor DarkGray
+    Write-Host "   Dosya: $($_.InvocationInfo.ScriptName)" -ForegroundColor DarkGray
+
+    if ($null -ne $projectRoot -and (Test-Path $projectRoot)) { Set-Location $projectRoot }
+}
+finally {
+    Write-Host "`nCikmak icin bir tusa basin..." -ForegroundColor Yellow
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}

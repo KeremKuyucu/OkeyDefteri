@@ -100,4 +100,25 @@ class StorageService {
       'averageScore': totalGames > 0 ? totalScore / totalGames : 0,
     };
   }
+
+  /// Verileri JSON formatında dışa aktar
+  static Future<String> exportData() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_gamesKey) ?? '[]';
+  }
+
+  /// JSON formatındaki verileri içe aktar
+  static Future<void> importData(String jsonData) async {
+    final prefs = await SharedPreferences.getInstance();
+    try {
+      final List<dynamic> gamesList = jsonDecode(jsonData);
+      // Doğrulama: Hata fırlatmazsa veriler düzgündür
+      for (var g in gamesList) {
+        Game.fromJson(g);
+      }
+      await prefs.setString(_gamesKey, jsonData);
+    } catch (e) {
+      throw FormatException('Geçersiz veri formatı');
+    }
+  }
 }

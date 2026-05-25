@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
+import 'services/logging_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await LoggingService.init();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -20,16 +22,36 @@ void main() {
   runApp(const OkeyDefteriApp());
 }
 
-class OkeyDefteriApp extends StatelessWidget {
+class OkeyDefteriApp extends StatefulWidget {
   const OkeyDefteriApp({super.key});
+
+  static void restartApp(BuildContext context) {
+    context.findAncestorStateOfType<_OkeyDefteriAppState>()?.restartApp();
+  }
+
+  @override
+  State<OkeyDefteriApp> createState() => _OkeyDefteriAppState();
+}
+
+class _OkeyDefteriAppState extends State<OkeyDefteriApp> {
+  Key key = UniqueKey();
+
+  void restartApp() {
+    setState(() {
+      key = UniqueKey();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Okey 101 Skor Defteri',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
-      home: const HomeScreen(),
+    return KeyedSubtree(
+      key: key,
+      child: MaterialApp(
+        title: 'Okey 101 Skor Defteri',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.darkTheme,
+        home: const HomeScreen(),
+      ),
     );
   }
 }

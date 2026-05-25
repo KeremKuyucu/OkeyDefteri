@@ -403,6 +403,7 @@ class StatsScreen extends StatelessWidget {
   Widget _buildErrorAnalysis() {
     final errorTypes = [
       ScoreType.islekAtti,
+      ScoreType.okeyAtti,
       ScoreType.okeyiniAldilar,
       ScoreType.yanlisElActi,
       ScoreType.acamadi,

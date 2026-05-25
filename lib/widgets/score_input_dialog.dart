@@ -876,6 +876,12 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
               ),
               const SizedBox(height: 8),
               _buildScoreButton(
+                ScoreType.okeyAtti,
+                color: AppTheme.warningOrange,
+                icon: Icons.style_rounded,
+              ),
+              const SizedBox(height: 8),
+              _buildScoreButton(
                 ScoreType.okeyiniAldilar,
                 color: AppTheme.warningOrange,
                 icon: Icons.style_rounded,

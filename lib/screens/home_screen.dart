@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import '../services/storage_service.dart';
 import '../models/game_models.dart';
@@ -7,6 +8,7 @@ import 'past_games_screen.dart';
 import 'game_screen.dart';
 import '../widgets/developer_info.dart';
 import '../services/settings_service.dart';
+import '../main.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -72,6 +74,7 @@ class _HomeScreenState extends State<HomeScreen>
   void _showSettings() async {
     bool isVibrationEnabled = await SettingsService.getVibrationEnabled();
     bool isSoundEnabled = await SettingsService.getSoundEnabled();
+    bool isTelemetryEnabled = await SettingsService.getTelemetryEnabled();
 
     if (!mounted) return;
 
@@ -146,6 +149,71 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 ListTile(
                   leading: const Icon(
+                    Icons.security,
+                    color: AppTheme.accentGold,
+                  ),
+                  title: const Text(
+                    'Anonim Kullanım Verisi (Ping) Gönder',
+                    style: TextStyle(color: AppTheme.textPrimary),
+                  ),
+                  trailing: Switch(
+                    value: isTelemetryEnabled,
+                    onChanged: (v) async {
+                      if (!v) {
+                        final shouldDisable = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            backgroundColor: AppTheme.surfaceDark,
+                            title: const Text(
+                              'Emin misiniz?',
+                              style: TextStyle(color: AppTheme.textPrimary),
+                            ),
+                            content: const Text(
+                              'Bu veri sizinle asla ilişkilendirilemez. Tek amacı uygulamanın günlük kullanım sayısını öğrenmektir.\n\nGönderilen örnek ping:\n{\n  "uid": "123e4567-e89b-12d3...",\n  "timestamp": "2026-05-25T14:30:00",\n  "app": "okey_defteri",\n  "event": "app_opened_daily",\n  "platform": "mobile" // veya "web"\n}',
+                              style: TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 13,
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx, true),
+                                child: const Text(
+                                  'Yine de Kapat',
+                                  style: TextStyle(
+                                    color: AppTheme.warningOrange,
+                                  ),
+                                ),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.accentGold,
+                                ),
+                                onPressed: () => Navigator.pop(ctx, false),
+                                child: const Text(
+                                  'Açık Kalsın',
+                                  style: TextStyle(
+                                    color: AppTheme.backgroundDark,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (shouldDisable != true) return;
+                      }
+
+                      await SettingsService.setTelemetryEnabled(v);
+                      setBottomSheetState(() {
+                        isTelemetryEnabled = v;
+                      });
+                    },
+                    activeThumbColor: AppTheme.accentGold,
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(
                     Icons.info_outline,
                     color: AppTheme.accentGold,
                   ),
@@ -158,10 +226,113 @@ class _HomeScreenState extends State<HomeScreen>
                     DeveloperInfo.show(context);
                   },
                 ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.import_export,
+                    color: AppTheme.accentGold,
+                  ),
+                  title: const Text(
+                    'Verileri İçe/Dışa Aktar',
+                    style: TextStyle(color: AppTheme.textPrimary),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showImportExportDialog();
+                  },
+                ),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _showImportExportDialog() async {
+    final data = await StorageService.exportData();
+    final controller = TextEditingController(text: data);
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceDark,
+        title: const Text(
+          'Verileri İçe/Dışa Aktar',
+          style: TextStyle(color: AppTheme.textPrimary),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: TextField(
+            controller: controller,
+            maxLines: 15,
+            style: const TextStyle(
+              color: AppTheme.textSecondary,
+              fontFamily: 'monospace',
+              fontSize: 12,
+            ),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: AppTheme.backgroundDark,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              hintText: 'JSON verisini buraya yapıştırın',
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: controller.text));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Tüm veriler kopyalandı')),
+              );
+            },
+            child: const Text(
+              'Tümünü Kopyala',
+              style: TextStyle(color: AppTheme.accentGold),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'İptal',
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentGold,
+            ),
+            onPressed: () async {
+              try {
+                await StorageService.importData(controller.text);
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Veriler başarıyla güncellendi'),
+                    ),
+                  );
+                  OkeyDefteriApp.restartApp(context);
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Hata: Geçersiz JSON formatı')),
+                );
+              }
+            },
+            child: const Text(
+              'Kaydet',
+              style: TextStyle(
+                color: AppTheme.backgroundDark,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
