@@ -25,7 +25,7 @@
     "title": "Settings",
     "language": "Selected Language: ",
     "vibration": "Vibration",
-    "sound": "Sound Effects",
+    "sound_effects": "Sound Effects",
     "telemetry": "Send Anonymous User Data",
     "toxic_nicknames": "Toxic Nicknames",
     "about": "About App",
