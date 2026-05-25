@@ -73,6 +73,7 @@
     "end_game": "Oyunu Bitir",
     "history": "Skor Geçmişi",
     "stats": "İstatistikler",
+    "next_round": "Sonraki Tur",
     "finished": "Bu oyun bitmiştir, müdahale edilemez.",
     "process_cancel": "{0} için son girilen puanı {1} geri almak istediğinize emin misiniz?",
     "tour_start_info": "Tur {0} başladı!",

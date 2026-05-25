@@ -75,6 +75,7 @@
     "end_game": "End Game",
     "history": "Score History",
     "stats": "Statistics",
+    "next_round": "Next Round",
     "finished": "This game has ended. No changes can be made.",
     "process_cancel": "Are you sure you want to undo the last score entered for {0} by {1}?",
     "tour_start_info": "Round {0} started!",
