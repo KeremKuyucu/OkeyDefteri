@@ -7,8 +7,6 @@ import 'package:http/http.dart' as http;
 
 class LoggingService {
   static const String _uidKey = 'app_unique_id';
-  static const String _lastLogDateKey = 'last_log_date';
-
   static const String _logApiUrl = 'https://keremkk.com.tr/api/logs';
 
   /// Uygulama açılışında çağrılacak ana metod
@@ -24,46 +22,35 @@ class LoggingService {
       }
 
       // 2. Günlük log kontrolü
-      final isTelemetryEnabled = await SettingsService.getTelemetryEnabled();
+      final isTelemetryEnabled = SettingsService.getTelemetryEnabled();
       if (!isTelemetryEnabled) return;
 
-      final now = DateTime.now();
-      final todayStr =
-          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-      final lastLogDate = prefs.getString(_lastLogDateKey);
+      try {
+        final response = await http.post(
+          Uri.parse(_logApiUrl),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'uid': uid,
+            'timestamp': DateTime.now().toIso8601String(),
+            'app': 'okey_defteri',
+            'event': 'app_opened_daily',
+            'platform': kIsWeb ? 'web' : 'mobile',
+          }),
+        );
 
-      if (lastLogDate != todayStr) {
-        // O gün henüz log atılmamış, log gönder ve tarihi güncelle
-        await _sendDailyLog(uid);
-        await prefs.setString(_lastLogDateKey, todayStr);
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          debugPrint('Günlük log başarıyla gönderildi: $uid');
+        } else {
+          debugPrint(
+            'Günlük log gönderilemedi. Status: ${response.statusCode}',
+          );
+        }
+      } catch (e) {
+        // İnternet yoksa veya sunucuya ulaşılamazsa sessizce hatayı yut
+        debugPrint('Log gönderim hatası: $e');
       }
     } catch (e) {
       debugPrint('LoggingService init hatası: $e');
-    }
-  }
-
-  static Future<void> _sendDailyLog(String uid) async {
-    try {
-      final response = await http.post(
-        Uri.parse(_logApiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'uid': uid,
-          'timestamp': DateTime.now().toIso8601String(),
-          'app': 'okey_defteri',
-          'event': 'app_opened_daily',
-          'platform': kIsWeb ? 'web' : 'mobile',
-        }),
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint('Günlük log başarıyla gönderildi: $uid');
-      } else {
-        debugPrint('Günlük log gönderilemedi. Status: ${response.statusCode}');
-      }
-    } catch (e) {
-      // İnternet yoksa veya sunucuya ulaşılamazsa sessizce hatayı yut
-      debugPrint('Log gönderim hatası: $e');
     }
   }
 }
