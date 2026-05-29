@@ -8,7 +8,7 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-val keystorePropertiesFile = file("C:\\Users\\Kerem\\Projects\\Thinks\\imza-bilgileri\\key.properties")
+val keystorePropertiesFile = file("C:\\Users\\Kerem\\Projects\\imza-bilgileri\\key.properties")
 val keystoreProperties = Properties()
 var hasValidKeystore = false
 
