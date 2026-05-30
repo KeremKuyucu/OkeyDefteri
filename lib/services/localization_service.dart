@@ -10,11 +10,10 @@ class Localization {
   };
 
   static Map<String, dynamic>? _localizedStrings;
-  static String _currentLanguage = 'eng';
+  static String _currentLanguage = 'tur';
   static List<String> get supportedLanguages => languages.keys.toList();
   static String get currentLanguage => _currentLanguage;
-  static String get currentLanguageName =>
-      languages[_currentLanguage] ?? 'English';
+  static String get currentLanguageName => languages[_currentLanguage]!;
 
   static Future<void> init() async {
     final lang = SettingsService.getLanguage();
@@ -26,12 +25,14 @@ class Localization {
     if (!languages.containsKey(iso3Code)) iso3Code = 'eng';
 
     try {
-      final String jsonString =
-          await rootBundle.loadString('assets/lang/$iso3Code.json');
+      final String jsonString = await rootBundle.loadString(
+        'assets/lang/$iso3Code.json',
+      );
       _localizedStrings = json.decode(jsonString);
       _currentLanguage = iso3Code;
       debugPrint(
-          '🌍 Language Loaded: $_currentLanguage (assets/lang/$iso3Code.json)');
+        '🌍 Language Loaded: $_currentLanguage (assets/lang/$iso3Code.json)',
+      );
     } catch (e) {
       debugPrint('❌ Language File Could Not Be Loaded ($iso3Code): $e');
 

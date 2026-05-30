@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,21 +19,161 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Okey Defteri - 101 ve Okey Skor Asistanı">
 
-  <!-- iOS meta tags & icons -->
+  <!-- Android & Chrome PWA -->
+  <meta name="theme-color" content="#1E1E24">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="okey_defteri">
+
+  <!-- iOS PWA Meta Tags & Icons -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Okey Defteri">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/png" href="favicon.png" />
 
-  <title>okey_defteri</title>
+  <title>Okey Defteri</title>
+
+  <!-- Premium Yüklenme Ekranı CSS Stilleri -->
+  <style>
+    body {
+      background-color: #1E1E24;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    #loading-indicator {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #1E1E24;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 999999;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      transition: opacity 0.4s ease-out;
+      opacity: 1;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(255, 255, 255, 0.05);
+      border-radius: 50%;
+      border-top-color: #00F2FE;
+      animation: spin 1s ease-in-out infinite;
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+    }
+
+    .loading-text {
+      margin-top: 20px;
+      color: #E2E8F0;
+      font-size: 1rem;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      opacity: 0.8;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 0.3;
+      }
+
+      50% {
+        opacity: 0.9;
+      }
+    }
+  </style>
+
+  <script>
+    (function () {
+      try {
+        var savedLang = localStorage.getItem('flutter.app_language');
+        var resolvedLang = 'eng';
+        if (savedLang) {
+          resolvedLang = savedLang.replace(/"/g, '').trim();
+        }
+
+        // Dil dosyasından uygulama adını ve açıklamasını dinamik olarak çek
+        var filePath = 'assets/assets/lang/' + resolvedLang + '.json';
+        fetch(filePath)
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (data) {
+            // 1. Dinamik Başlık Güncellemesi
+            if (data && data.app && data.app.name) {
+              document.title = data.app.name;
+
+              // Yükleme ekranı yazısını da dinamikleştir
+              var textEl = document.querySelector('.loading-text');
+              if (textEl) textEl.textContent = data.app.name;
+            }
+            // 2. Dinamik Açıklama Güncellemesi (SEO)
+            var descMeta = document.querySelector('meta[name="description"]');
+            if (descMeta && data.about && data.about.description) {
+              descMeta.content = data.about.description;
+            }
+          })
+          .catch(function (err) {
+            // Yükleme hatası durumunda varsayılan statik başlıkları kullan
+            document.title = resolvedLang === 'tur' ? 'Okey Defteri' : 'Okey Notebook';
+          });
+
+        // Flutter yüklendiğinde yüklenme ekranını otomatik olarak kapatan MutationObserver
+        var observer = new MutationObserver(function (mutations) {
+          mutations.forEach(function (mutation) {
+            for (var i = 0; i < mutation.addedNodes.length; i++) {
+              var node = mutation.addedNodes[i];
+              if (node.nodeName && node.nodeName.startsWith('FLT-')) {
+                var loader = document.getElementById('loading-indicator');
+                if (loader) {
+                  loader.style.opacity = '0';
+                  setTimeout(function () {
+                    if (loader.parentNode) {
+                      loader.parentNode.removeChild(loader);
+                    }
+                  }, 400);
+                }
+                observer.disconnect();
+                break;
+              }
+            }
+          });
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+      } catch (e) {
+        // Tarayıcı kısıtlamaları vb. nedeniyle erişim engellenirse sessizce geç
+      }
+    })();
+  </script>
   <link rel="manifest" href="manifest.json">
 </head>
+
 <body>
+  <!-- Yüklenme Ekranı (Flutter yüklendiğinde otomatik kapanır) -->
+  <div id="loading-indicator">
+    <div class="spinner"></div>
+    <div class="loading-text">Okey Defteri</div>
+  </div>
+
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
@@ -43,4 +184,5 @@
   -->
   <script src="flutter_bootstrap.js" async></script>
 </body>
+
 </html>
