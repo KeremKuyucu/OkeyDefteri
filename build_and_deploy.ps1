@@ -134,9 +134,22 @@ try {
         }
     }
 
+    # -- Vercel Baglantisini Koruma (Baslangic Yedeklemesi) -------------------------
+    $sourceWebVercel = Join-Path $projectRoot "web\.vercel"
+    $buildWebVercel  = Join-Path $projectRoot "build\web\.vercel"
+
+    if (Test-Path $buildWebVercel) {
+        if (-not (Test-Path $sourceWebVercel)) {
+            Ensure-Dir $sourceWebVercel
+            Copy-Item -Path "$buildWebVercel\*" -Destination $sourceWebVercel -Recurse -Force
+            Write-Info "Vercel baglantisi build\web\.vercel konumundan web\.vercel konumuna yedeklendi."
+        }
+    }
+
     # -- 1) Versiyon Bilgisi -------------------------------------------------------
     $pubspecPath    = Join-Path $projectRoot "pubspec.yaml"
     $currentVersion = $null
+
 
     if (Test-Path $pubspecPath) {
         $versionLine = Get-Content $pubspecPath | Select-String "^\s*version:\s*"
@@ -287,9 +300,31 @@ try {
         Write-Step "Vercel'e Deploy Ediliyor"
         Write-Info "Kaynak: $webBuildSrc"
 
+        # Vercel baglanti dosyalarini derleme klasorune kopyala
+        if (Test-Path $sourceWebVercel) {
+            $buildWebVercel = Join-Path $webBuildSrc ".vercel"
+            Ensure-Dir $buildWebVercel
+            Copy-Item -Path "$sourceWebVercel\*" -Destination $buildWebVercel -Recurse -Force
+            Write-Info "Vercel baglanti bilgileri ($sourceWebVercel) build klasorune geri yuklendi."
+        }
+
+        $sourceVercelJson = Join-Path $projectRoot "web\vercel.json"
+        if (Test-Path $sourceVercelJson) {
+            Copy-Item -Path $sourceVercelJson -Destination $webBuildSrc -Force
+            Write-Info "vercel.json dosyasi build klasorune kopyalandi."
+        }
+
         Run-Exe -FilePath "cmd.exe" `
             -ArgumentList @("/c", "vercel --prod --yes") `
             -WorkingDirectory $webBuildSrc
+
+        # Deploy sonrasi guncellemeleri kaynak web dizinine geri yedekle
+        $buildWebVercel = Join-Path $webBuildSrc ".vercel"
+        if (Test-Path $buildWebVercel) {
+            Ensure-Dir $sourceWebVercel
+            Copy-Item -Path "$buildWebVercel\*" -Destination $sourceWebVercel -Recurse -Force
+            Write-Info "Guncel Vercel baglanti bilgileri kaynak dizine ($sourceWebVercel) yedeklendi."
+        }
 
         Write-Ok "Web deploy tamamlandi (Vercel production)."
     }
