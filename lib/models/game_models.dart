@@ -22,6 +22,9 @@ enum ScoreType {
   americanoIslek, // İşlek atma cezası +50 (Americano)
   americanoHile, // Hile yakalanma cezası +50 (Americano)
   americanoKazandi, // Turu kazandı (0 puan, işaret) (Americano)
+  americanoTakimYokOkeyAldi, // Takım yok okeyini alma cezası +50 (Americano)
+  americanoOkeyAtti, // Okey atma cezası +50 (Americano)
+  americanoYanlisElActi, // Yanlış el açma cezası +50 (Americano)
 }
 
 extension ScoreTypeExtension on ScoreType {
@@ -57,6 +60,12 @@ extension ScoreTypeExtension on ScoreType {
         return Localization.t('score_types.americano_hile');
       case ScoreType.americanoKazandi:
         return Localization.t('score_types.americano_kazandi');
+      case ScoreType.americanoTakimYokOkeyAldi:
+        return Localization.t('score_types.americano_takim_yok_okey_aldi');
+      case ScoreType.americanoOkeyAtti:
+        return Localization.t('score_types.americano_okey_atti');
+      case ScoreType.americanoYanlisElActi:
+        return Localization.t('score_types.americano_yanlis_el_acti');
     }
   }
 
@@ -92,6 +101,12 @@ extension ScoreTypeExtension on ScoreType {
         return '🚫';
       case ScoreType.americanoKazandi:
         return '🏆';
+      case ScoreType.americanoTakimYokOkeyAldi:
+        return '🃏⚠️';
+      case ScoreType.americanoOkeyAtti:
+        return '🃏❌';
+      case ScoreType.americanoYanlisElActi:
+        return '❌';
     }
   }
 
@@ -108,11 +123,11 @@ extension ScoreTypeExtension on ScoreType {
       case ScoreType.normalBitti:
         return -101;
       case ScoreType.eldenBitti:
-        return -101;
+        return -202;
       case ScoreType.okeyAtarakBitti:
         return -202;
       case ScoreType.okeyAtarakEldenBitti:
-        return -404; // Normal elden bittiği gibi, ancak okey cezaları 2'ye katladığı için sadece ekstra çarpan uygulanır
+        return -404;
       case ScoreType.acamadi:
         return 202;
       case ScoreType.attigiTasiAldilar:
@@ -126,7 +141,13 @@ extension ScoreTypeExtension on ScoreType {
       case ScoreType.americanoHile:
         return 50;
       case ScoreType.americanoKazandi:
-        return 0;
+        return -50;
+      case ScoreType.americanoTakimYokOkeyAldi:
+        return 50;
+      case ScoreType.americanoOkeyAtti:
+        return 50;
+      case ScoreType.americanoYanlisElActi:
+        return 50;
     }
   }
 
@@ -329,11 +350,14 @@ class Player {
       if (yanlisEl >= 2) return Localization.t('nicknames.early_yanlis_el');
       if (okeyAtti >= 1) return Localization.t('nicknames.early_okey_atti');
       if (islekAtti >= 1) return Localization.t('nicknames.early_islek_atti');
-      if (okeyiniAldilar >= 1) return Localization.t('nicknames.early_okeyini_aldilar');
+      if (okeyiniAldilar >= 1)
+        return Localization.t('nicknames.early_okeyini_aldilar');
 
-      if (okeyEldenBitti >= 1) return Localization.t('nicknames.early_okey_elden_bitti');
+      if (okeyEldenBitti >= 1)
+        return Localization.t('nicknames.early_okey_elden_bitti');
       if (okeyBitti >= 1) return Localization.t('nicknames.early_okey_bitti');
-      if (penaltiesCaused >= 1) return Localization.t('nicknames.early_penalties_caused');
+      if (penaltiesCaused >= 1)
+        return Localization.t('nicknames.early_penalties_caused');
 
       if (isLeader) return Localization.t('nicknames.early_leader');
       if (isLast) return Localization.t('nicknames.early_last');
@@ -346,12 +370,17 @@ class Player {
     if (roundNumber <= 7) {
       if (yanlisEl >= 3) return Localization.t('nicknames.mid_yanlis_el');
       if (acamadi >= 4) return Localization.t('nicknames.mid_acamadi');
-      if ((islekAtti + okeyAtti) >= 4) return Localization.t('nicknames.mid_tas_dagitma');
+      if ((islekAtti + okeyAtti) >= 4)
+        return Localization.t('nicknames.mid_tas_dagitma');
 
-      if (isLast && scoreDiff > 250) return Localization.t('nicknames.mid_last_far');
-      if (okeyEldenBitti >= 1) return Localization.t('nicknames.mid_okey_elden_bitti');
-      if (penaltiesCaused >= 4) return Localization.t('nicknames.mid_penalties_caused');
-      if (penaltiesReceived >= 3) return Localization.t('nicknames.mid_penalties_received');
+      if (isLast && scoreDiff > 250)
+        return Localization.t('nicknames.mid_last_far');
+      if (okeyEldenBitti >= 1)
+        return Localization.t('nicknames.mid_okey_elden_bitti');
+      if (penaltiesCaused >= 4)
+        return Localization.t('nicknames.mid_penalties_caused');
+      if (penaltiesReceived >= 3)
+        return Localization.t('nicknames.mid_penalties_received');
       if (isOnFire) return Localization.t('nicknames.mid_on_fire');
       if (isLeader) return Localization.t('nicknames.mid_leader');
 
@@ -365,26 +394,33 @@ class Player {
     // Felaketler
     if (yanlisEl >= 4) return Localization.t('nicknames.late_yanlis_el');
     if (acamadi >= 5) return Localization.t('nicknames.late_acamadi');
-    if (okeyiniAldilar >= 3) return Localization.t('nicknames.late_okeyini_aldilar');
+    if (okeyiniAldilar >= 3)
+      return Localization.t('nicknames.late_okeyini_aldilar');
 
     // İyi olanlar (zorba + erotik)
-    if (penaltiesCaused >= 6) return Localization.t('nicknames.late_penalties_caused');
-    if (okeyEldenBitti >= 2) return Localization.t('nicknames.late_okey_elden_bitti');
+    if (penaltiesCaused >= 6)
+      return Localization.t('nicknames.late_penalties_caused');
+    if (okeyEldenBitti >= 2)
+      return Localization.t('nicknames.late_okey_elden_bitti');
     if (okeyBitti >= 4) return Localization.t('nicknames.late_okey_bitti');
     if (eldenBitti >= 3) return Localization.t('nicknames.late_elden_bitti');
 
-    if (isOnFire && isLeader) return Localization.t('nicknames.late_on_fire_leader');
+    if (isOnFire && isLeader)
+      return Localization.t('nicknames.late_on_fire_leader');
 
-    final double winLossRatio = (roundNumber - toplamBitirme) > 0 
-        ? (toplamBitirme / (roundNumber - toplamBitirme)) 
+    final double winLossRatio = (roundNumber - toplamBitirme) > 0
+        ? (toplamBitirme / (roundNumber - toplamBitirme))
         : toplamBitirme.toDouble();
-    if (winLossRatio >= 3.0 && isLeader) return Localization.t('nicknames.late_win_ratio_leader');
+    if (winLossRatio >= 3.0 && isLeader)
+      return Localization.t('nicknames.late_win_ratio_leader');
 
     // Puan durumu
-    if (isLast && totalScore > 700) return Localization.t('nicknames.late_last_very_far');
+    if (isLast && totalScore > 700)
+      return Localization.t('nicknames.late_last_very_far');
     if (isLast) return Localization.t('nicknames.late_last');
 
-    if (isLeader && totalScore < -500) return Localization.t('nicknames.late_leader_very_far');
+    if (isLeader && totalScore < -500)
+      return Localization.t('nicknames.late_leader_very_far');
     if (isLeader) return Localization.t('nicknames.late_leader');
 
     if (totalScore > 500) return Localization.t('nicknames.late_score_500');
@@ -456,18 +492,46 @@ class AmericanoRound {
   });
 
   static const List<AmericanoRound> rounds = [
-    AmericanoRound(roundNumber: 1,  titleKey: 'americano.round_1',  emoji: '🃏'),
-    AmericanoRound(roundNumber: 2,  titleKey: 'americano.round_2',  emoji: '🎴'),
-    AmericanoRound(roundNumber: 3,  titleKey: 'americano.round_3',  emoji: '🃏🃏'),
-    AmericanoRound(roundNumber: 4,  titleKey: 'americano.round_4',  emoji: '🎴🎴'),
-    AmericanoRound(roundNumber: 5,  titleKey: 'americano.round_5',  emoji: '🃏🎴'),
-    AmericanoRound(roundNumber: 6,  titleKey: 'americano.round_6',  emoji: '⬛'),
-    AmericanoRound(roundNumber: 7,  titleKey: 'americano.round_7',  emoji: '📏'),
-    AmericanoRound(roundNumber: 8,  titleKey: 'americano.round_8',  emoji: '⬛⬛'),
-    AmericanoRound(roundNumber: 9,  titleKey: 'americano.round_9',  emoji: '📏📏'),
-    AmericanoRound(roundNumber: 10, titleKey: 'americano.round_10', emoji: '⬛📏'),
-    AmericanoRound(roundNumber: 11, titleKey: 'americano.round_11', emoji: '📏✨'),
-    AmericanoRound(roundNumber: 12, titleKey: 'americano.round_12', emoji: '👑'),
+    AmericanoRound(roundNumber: 1, titleKey: 'americano.round_1', emoji: '🃏'),
+    AmericanoRound(roundNumber: 2, titleKey: 'americano.round_2', emoji: '🎴'),
+    AmericanoRound(
+      roundNumber: 3,
+      titleKey: 'americano.round_3',
+      emoji: '🃏🃏',
+    ),
+    AmericanoRound(
+      roundNumber: 4,
+      titleKey: 'americano.round_4',
+      emoji: '🎴🎴',
+    ),
+    AmericanoRound(
+      roundNumber: 5,
+      titleKey: 'americano.round_5',
+      emoji: '🃏🎴',
+    ),
+    AmericanoRound(roundNumber: 6, titleKey: 'americano.round_6', emoji: '⬛'),
+    AmericanoRound(roundNumber: 7, titleKey: 'americano.round_7', emoji: '📏'),
+    AmericanoRound(roundNumber: 8, titleKey: 'americano.round_8', emoji: '⬛⬛'),
+    AmericanoRound(
+      roundNumber: 9,
+      titleKey: 'americano.round_9',
+      emoji: '📏📏',
+    ),
+    AmericanoRound(
+      roundNumber: 10,
+      titleKey: 'americano.round_10',
+      emoji: '⬛📏',
+    ),
+    AmericanoRound(
+      roundNumber: 11,
+      titleKey: 'americano.round_11',
+      emoji: '📏✨',
+    ),
+    AmericanoRound(
+      roundNumber: 12,
+      titleKey: 'americano.round_12',
+      emoji: '👑',
+    ),
   ];
 
   static AmericanoRound? forRound(int round) {

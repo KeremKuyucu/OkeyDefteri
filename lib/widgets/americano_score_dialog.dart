@@ -27,6 +27,9 @@ class _AmericanoRoundScoreDialogState
   final Map<String, TextEditingController> _cardControllers = {};
   final Map<String, bool> _islekFlags = {};
   final Map<String, bool> _hileFlags = {};
+  final Map<String, bool> _takimYokOkeyAldiFlags = {};
+  final Map<String, bool> _okeyAttiFlags = {};
+  final Map<String, bool> _yanlisElActiFlags = {};
 
   @override
   void initState() {
@@ -35,6 +38,9 @@ class _AmericanoRoundScoreDialogState
       _cardControllers[p.id] = TextEditingController();
       _islekFlags[p.id] = false;
       _hileFlags[p.id] = false;
+      _takimYokOkeyAldiFlags[p.id] = false;
+      _okeyAttiFlags[p.id] = false;
+      _yanlisElActiFlags[p.id] = false;
     }
   }
 
@@ -57,7 +63,7 @@ class _AmericanoRoundScoreDialogState
         entries.add(ScoreEntry(
           id: '${now.millisecondsSinceEpoch}_${p.id}_win',
           type: ScoreType.americanoKazandi,
-          points: 0,
+          points: -50,
           timestamp: now,
           roundNumber: widget.roundNumber,
         ));
@@ -87,6 +93,33 @@ class _AmericanoRoundScoreDialogState
         entries.add(ScoreEntry(
           id: '${now.millisecondsSinceEpoch}_${p.id}_hile',
           type: ScoreType.americanoHile,
+          points: 50,
+          timestamp: now,
+          roundNumber: widget.roundNumber,
+        ));
+      }
+      if (_takimYokOkeyAldiFlags[p.id] == true) {
+        entries.add(ScoreEntry(
+          id: '${now.millisecondsSinceEpoch}_${p.id}_takim_yok',
+          type: ScoreType.americanoTakimYokOkeyAldi,
+          points: 50,
+          timestamp: now,
+          roundNumber: widget.roundNumber,
+        ));
+      }
+      if (_okeyAttiFlags[p.id] == true) {
+        entries.add(ScoreEntry(
+          id: '${now.millisecondsSinceEpoch}_${p.id}_okey_atti',
+          type: ScoreType.americanoOkeyAtti,
+          points: 50,
+          timestamp: now,
+          roundNumber: widget.roundNumber,
+        ));
+      }
+      if (_yanlisElActiFlags[p.id] == true) {
+        entries.add(ScoreEntry(
+          id: '${now.millisecondsSinceEpoch}_${p.id}_yanlis_el',
+          type: ScoreType.americanoYanlisElActi,
           points: 50,
           timestamp: now,
           roundNumber: widget.roundNumber,
@@ -361,7 +394,9 @@ class _AmericanoRoundScoreDialogState
               ),
             ],
             const SizedBox(height: 8),
-            Row(
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
               children: [
                 _penaltyChip(
                   label: Localization.t('americano.islek'),
@@ -371,7 +406,6 @@ class _AmericanoRoundScoreDialogState
                       _islekFlags[player.id] =
                           !(_islekFlags[player.id] ?? false)),
                 ),
-                const SizedBox(width: 6),
                 _penaltyChip(
                   label: Localization.t('americano.hile'),
                   emoji: '🚫',
@@ -379,6 +413,30 @@ class _AmericanoRoundScoreDialogState
                   onTap: () => setState(() =>
                       _hileFlags[player.id] =
                           !(_hileFlags[player.id] ?? false)),
+                ),
+                _penaltyChip(
+                  label: Localization.t('americano.takim_yok_okey_aldi'),
+                  emoji: '🃏⚠️',
+                  isSelected: _takimYokOkeyAldiFlags[player.id] ?? false,
+                  onTap: () => setState(() =>
+                      _takimYokOkeyAldiFlags[player.id] =
+                          !(_takimYokOkeyAldiFlags[player.id] ?? false)),
+                ),
+                _penaltyChip(
+                  label: Localization.t('americano.okey_atti'),
+                  emoji: '🃏❌',
+                  isSelected: _okeyAttiFlags[player.id] ?? false,
+                  onTap: () => setState(() =>
+                      _okeyAttiFlags[player.id] =
+                          !(_okeyAttiFlags[player.id] ?? false)),
+                ),
+                _penaltyChip(
+                  label: Localization.t('americano.yanlis_el_acti'),
+                  emoji: '❌',
+                  isSelected: _yanlisElActiFlags[player.id] ?? false,
+                  onTap: () => setState(() =>
+                      _yanlisElActiFlags[player.id] =
+                          !(_yanlisElActiFlags[player.id] ?? false)),
                 ),
               ],
             ),

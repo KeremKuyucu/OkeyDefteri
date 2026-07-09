@@ -268,9 +268,6 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
     AudioVibrationService.vibrateHeavy();
     setState(() {
       _game.currentRound++;
-      for (final p in _game.allPlayers) {
-        p.isCiftliGidiyor = false;
-      }
     });
     _bannerController
       ..reset()
@@ -327,7 +324,6 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
                 for (final p in _game.allPlayers) {
                   p.scores.removeWhere(
                       (s) => s.roundNumber == _game.currentRound);
-                  p.isCiftliGidiyor = false;
                 }
                 _game.currentRound = prevRound;
               });

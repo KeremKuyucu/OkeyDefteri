@@ -345,6 +345,7 @@ class ScoreInputDialog extends StatefulWidget {
 class _ScoreInputDialogState extends State<ScoreInputDialog> {
   final TextEditingController _manualController = TextEditingController();
   late bool _isOkeyFinish;
+  late bool _isEldenFinish;
 
   @override
   void initState() {
@@ -354,7 +355,15 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
       (p) => p.scores.any(
         (s) =>
             s.roundNumber == widget.currentRound &&
-            (s.type == ScoreType.okeyAtarakBitti || s.type == ScoreType.okeyAtarakEldenBitti),
+            s.type == ScoreType.okeyAtarakBitti,
+      ),
+    );
+    // Eğer aynı elde herhangi biri elden bittiyse varsayılan olarak true olsun
+    _isEldenFinish = widget.allPlayers.any(
+      (p) => p.scores.any(
+        (s) =>
+            s.roundNumber == widget.currentRound &&
+            s.type == ScoreType.eldenBitti,
       ),
     );
   }
@@ -371,7 +380,7 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
         type == ScoreType.eldeKalanTaslar && widget.player.isCiftliGidiyor;
     final isOkey =
         !type.isFinishType &&
-        _isOkeyFinish; // Sadece bitirme olmayan skorlar okey çarpanından etkilenir
+        (_isOkeyFinish || _isEldenFinish); // Sadece bitirme olmayan skorlar okey/elden çarpanından etkilenir
 
     final entry = ScoreEntry(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -835,12 +844,6 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
                 color: const Color(0xFF7E57C2),
                 icon: Icons.style_rounded,
               ),
-              const SizedBox(height: 8),
-              _buildScoreButton(
-                ScoreType.okeyAtarakEldenBitti,
-                color: const Color(0xFF673AB7),
-                icon: Icons.military_tech_rounded,
-              ),
               const SizedBox(height: 16),
 
               // CEZA bölümü
@@ -865,8 +868,37 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
                     ),
                   ),
                   value: _isOkeyFinish,
-                  onChanged: (v) => setState(() => _isOkeyFinish = v),
+                  onChanged: (v) => setState(() {
+                    _isOkeyFinish = v;
+                    if (v) _isEldenFinish = false;
+                  }),
                   activeColor: AppTheme.warningOrange,
+                ),
+              ),
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceCard,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: AppTheme.lightGreen.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: SwitchListTile(
+                  title: const Text(
+                    'Rakip Elden Bitti\n(Cezalar x2)',
+                    style: TextStyle(
+                      color: AppTheme.lightGreen,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  value: _isEldenFinish,
+                  onChanged: (v) => setState(() {
+                    _isEldenFinish = v;
+                    if (v) _isOkeyFinish = false;
+                  }),
+                  activeColor: AppTheme.lightGreen,
                 ),
               ),
               _buildScoreButton(
