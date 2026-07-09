@@ -314,8 +314,8 @@ try {
             Write-Info "vercel.json dosyasi build klasorune kopyalandi."
         }
 
-        Run-Exe -FilePath "cmd.exe" `
-            -ArgumentList @("/c", "vercel --prod --yes") `
+        Run-Exe -FilePath "vercel" `
+            -ArgumentList @("--prod", "--yes") `
             -WorkingDirectory $webBuildSrc
 
         # Deploy sonrasi guncellemeleri kaynak web dizinine geri yedekle
