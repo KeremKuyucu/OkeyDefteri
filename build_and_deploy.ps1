@@ -314,9 +314,18 @@ try {
             Write-Info "vercel.json dosyasi build klasorune kopyalandi."
         }
 
-        Run-Exe -FilePath "vercel" `
-            -ArgumentList @("--prod", "--yes") `
-            -WorkingDirectory $webBuildSrc
+        # PowerShell'in & operatoru PATHEXT'i dogru cozumler (vercel -> vercel.cmd)
+        Write-Host "   >> vercel --prod --yes" -ForegroundColor DarkGray
+        Push-Location $webBuildSrc
+        try {
+            & vercel --prod --yes
+            if ($LASTEXITCODE -ne 0) {
+                throw "Vercel deploy basarisiz (ExitCode=$LASTEXITCODE)"
+            }
+        }
+        finally {
+            Pop-Location
+        }
 
         # Deploy sonrasi guncellemeleri kaynak web dizinine geri yedekle
         $buildWebVercel = Join-Path $webBuildSrc ".vercel"
