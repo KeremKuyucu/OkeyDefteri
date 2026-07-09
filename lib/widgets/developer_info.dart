@@ -68,7 +68,7 @@ class DeveloperInfo {
                   icon: Icons.code,
                   title: Localization.t('about.source_code'),
                   subtitle: 'github.com/keremkuyucu/okey_defteri',
-                  url: 'https://github.com/KeremKuyucu/okey-defteri-flutter',
+                  url: 'https://github.com/KeremKuyucu/OkeyDefteri',
                 ),
                 _buildInfoTile(
                   icon: Icons.email_outlined,

@@ -7,7 +7,7 @@ import 'package:okey_defteri/services/localization_service.dart';
 
 class UpdateService {
   static const String repoOwner = 'KeremKuyucu';
-  static const String repoName = 'okey-defteri-flutter';
+  static const String repoName = 'OkeyDefteri';
 
   static bool _isNewVersionAvailable(String local, String remote) {
     try {
