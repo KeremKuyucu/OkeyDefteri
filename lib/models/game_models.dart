@@ -1,6 +1,8 @@
 import 'package:okey_defteri/services/settings_service.dart';
-
 import '../services/localization_service.dart';
+
+/// Oyun modu
+enum GameMode { okey101, americano }
 
 /// Skor giriş türleri
 enum ScoreType {
@@ -15,6 +17,11 @@ enum ScoreType {
   acamadi, // +202 Açamadı
   attigiTasiAldilar, // Manuel puan - Attığı taşı aldılar
   eldeKalanTaslar, // Manuel puan - Elde kalan taşlar
+  // Americano'ya özel
+  americanoEldeKalan, // Elde kalan kart değeri (Americano)
+  americanoIslek, // İşlek atma cezası +50 (Americano)
+  americanoHile, // Hile yakalanma cezası +50 (Americano)
+  americanoKazandi, // Turu kazandı (0 puan, işaret) (Americano)
 }
 
 extension ScoreTypeExtension on ScoreType {
@@ -42,6 +49,14 @@ extension ScoreTypeExtension on ScoreType {
         return Localization.t('score_types.attigi_tasi_aldilar');
       case ScoreType.eldeKalanTaslar:
         return Localization.t('score_types.elde_kalan_taslar');
+      case ScoreType.americanoEldeKalan:
+        return Localization.t('score_types.americano_elde_kalan');
+      case ScoreType.americanoIslek:
+        return Localization.t('score_types.americano_islek');
+      case ScoreType.americanoHile:
+        return Localization.t('score_types.americano_hile');
+      case ScoreType.americanoKazandi:
+        return Localization.t('score_types.americano_kazandi');
     }
   }
 
@@ -69,6 +84,14 @@ extension ScoreTypeExtension on ScoreType {
         return '🪨';
       case ScoreType.eldeKalanTaslar:
         return '✋';
+      case ScoreType.americanoEldeKalan:
+        return '🃏';
+      case ScoreType.americanoIslek:
+        return '🎯';
+      case ScoreType.americanoHile:
+        return '🚫';
+      case ScoreType.americanoKazandi:
+        return '🏆';
     }
   }
 
@@ -83,25 +106,42 @@ extension ScoreTypeExtension on ScoreType {
       case ScoreType.yanlisElActi:
         return 101;
       case ScoreType.normalBitti:
-        return 0;
+        return -101;
       case ScoreType.eldenBitti:
         return -101;
       case ScoreType.okeyAtarakBitti:
-        return 0;
+        return -202;
       case ScoreType.okeyAtarakEldenBitti:
-        return -101; // Normal elden bittiği gibi, ancak okey cezaları 2'ye katladığı için sadece ekstra çarpan uygulanır
+        return -404; // Normal elden bittiği gibi, ancak okey cezaları 2'ye katladığı için sadece ekstra çarpan uygulanır
       case ScoreType.acamadi:
         return 202;
       case ScoreType.attigiTasiAldilar:
         return 0; // Manuel giriş
       case ScoreType.eldeKalanTaslar:
         return 0; // Manuel giriş
+      case ScoreType.americanoEldeKalan:
+        return 0; // Manuel giriş
+      case ScoreType.americanoIslek:
+        return 50;
+      case ScoreType.americanoHile:
+        return 50;
+      case ScoreType.americanoKazandi:
+        return 0;
     }
   }
 
   bool get isManual {
     return this == ScoreType.attigiTasiAldilar ||
-        this == ScoreType.eldeKalanTaslar;
+        this == ScoreType.eldeKalanTaslar ||
+        this == ScoreType.americanoEldeKalan;
+  }
+
+  /// Americano'ya mı özel?
+  bool get isAmericano {
+    return this == ScoreType.americanoEldeKalan ||
+        this == ScoreType.americanoIslek ||
+        this == ScoreType.americanoHile ||
+        this == ScoreType.americanoKazandi;
   }
 
   /// Bu tür bir bitirme türü mü?
@@ -403,6 +443,41 @@ class Team {
   );
 }
 
+/// Americano tur kuralı modeli
+class AmericanoRound {
+  final int roundNumber;
+  final String titleKey; // Localization anahtarı
+  final String emoji;
+
+  const AmericanoRound({
+    required this.roundNumber,
+    required this.titleKey,
+    required this.emoji,
+  });
+
+  static const List<AmericanoRound> rounds = [
+    AmericanoRound(roundNumber: 1,  titleKey: 'americano.round_1',  emoji: '🃏'),
+    AmericanoRound(roundNumber: 2,  titleKey: 'americano.round_2',  emoji: '🎴'),
+    AmericanoRound(roundNumber: 3,  titleKey: 'americano.round_3',  emoji: '🃏🃏'),
+    AmericanoRound(roundNumber: 4,  titleKey: 'americano.round_4',  emoji: '🎴🎴'),
+    AmericanoRound(roundNumber: 5,  titleKey: 'americano.round_5',  emoji: '🃏🎴'),
+    AmericanoRound(roundNumber: 6,  titleKey: 'americano.round_6',  emoji: '⬛'),
+    AmericanoRound(roundNumber: 7,  titleKey: 'americano.round_7',  emoji: '📏'),
+    AmericanoRound(roundNumber: 8,  titleKey: 'americano.round_8',  emoji: '⬛⬛'),
+    AmericanoRound(roundNumber: 9,  titleKey: 'americano.round_9',  emoji: '📏📏'),
+    AmericanoRound(roundNumber: 10, titleKey: 'americano.round_10', emoji: '⬛📏'),
+    AmericanoRound(roundNumber: 11, titleKey: 'americano.round_11', emoji: '📏✨'),
+    AmericanoRound(roundNumber: 12, titleKey: 'americano.round_12', emoji: '👑'),
+  ];
+
+  static AmericanoRound? forRound(int round) {
+    if (round < 1 || round > rounds.length) return null;
+    return rounds[round - 1];
+  }
+
+  String get title => Localization.t(titleKey);
+}
+
 /// Oyun modeli
 class Game {
   final String id;
@@ -412,6 +487,7 @@ class Game {
   final Team team2;
   int currentRound;
   bool isFinished;
+  final GameMode gameMode;
 
   Game({
     required this.id,
@@ -421,6 +497,7 @@ class Game {
     required this.team2,
     this.currentRound = 1,
     this.isFinished = false,
+    this.gameMode = GameMode.okey101,
   });
 
   List<Player> get allPlayers => [
@@ -452,6 +529,11 @@ class Game {
     return null;
   }
 
+  bool get isAmericano => gameMode == GameMode.americano;
+
+  /// Americano'da maksimum 12 tur var
+  bool get isLastAmericanoRound => isAmericano && currentRound >= 12;
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'createdAt': createdAt.toIso8601String(),
@@ -460,6 +542,7 @@ class Game {
     'team2': team2.toJson(),
     'currentRound': currentRound,
     'isFinished': isFinished,
+    'gameMode': gameMode.index,
   };
 
   factory Game.fromJson(Map<String, dynamic> json) => Game(
@@ -470,5 +553,8 @@ class Game {
     team2: Team.fromJson(json['team2']),
     currentRound: json['currentRound'],
     isFinished: json['isFinished'] ?? false,
+    gameMode: json['gameMode'] != null
+        ? GameMode.values[json['gameMode']]
+        : GameMode.okey101,
   );
 }

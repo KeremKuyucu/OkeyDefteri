@@ -75,10 +75,17 @@
     "history": "Skor Geçmişi",
     "stats": "İstatistikler",
     "next_round": "Sonraki Tur",
+    "prev_round": "Turu Geri Al",
     "finished": "Bu oyun bitmiştir, müdahale edilemez.",
     "process_cancel": "{0} için son girilen puanı {1} geri almak istediğinize emin misiniz?",
     "tour_start_info": "Tur {0} başladı!",
-    "end_game_confirm": "Oyunu bitirmek istediğinize emin misiniz? Skorlar kaydedilecektir."
+    "end_game_confirm": "Oyunu bitirmek istediğinize emin misiniz? Skorlar kaydedilecektir.",
+    "prev_round_confirm_title": "Turu Geri Al",
+    "prev_round_confirm": "Tur {0}'i geri almak istediğinize emin misiniz? Turdaki tüm puanlar silinecektir.",
+    "prev_round_undo": "Geri Al",
+    "forgot_round_title": "Turu Geçmeyi Unuttun!",
+    "forgot_round_message": "Bu turda zaten elde kalan ceza veya bitirme puanı girilmiş. Turu geçmeyi unuttun mu? Devam etmek istediğine emin misin?",
+    "forgot_round_continue": "Evet, Devam Et"
   },
   "new_game": {
     "title": "Yeni Oyun",
@@ -147,7 +154,11 @@
     "attigi_tasi_aldilar": "Attığı Taşı Aldılar",
     "elde_kalan_taslar": "Elde Kalan Taşlar",
     "caused_by_okeyini_aldilar": "Okeyini kim aldı?",
-    "caused_by_attigi_tasi_aldilar": "Attığı taşı kim aldı?"
+    "caused_by_attigi_tasi_aldilar": "Attığı taşı kim aldı?",
+    "americano_elde_kalan": "Elde Kalan Kart Değeri",
+    "americano_islek": "İşlek Atma",
+    "americano_hile": "Hile Yakalandı",
+    "americano_kazandi": "Turu Kazandı"
   },
   "nicknames": {
     "early_yanlis_el": "🤦♂️ Daha ilk el amk malı, niye geldin ki?",
@@ -186,5 +197,41 @@
     "late_score_500": "🥵 Defibrilatörle amını kurtaralım kral",
     "late_score_300": "😮💨 Götün yanıyor ama hâlâ dayanıyorsun",
     "late_default": "🃏 Amatör göt, hâlâ bir şey yapamadın"
+  },
+  "americano": {
+    "mode_name": "Americano",
+    "mode_101": "101 (Okey)",
+    "select_mode": "Oyun Modu Seç",
+    "round_rule": "Açılış Kuralı",
+    "round_of": "Tur {0} / 12",
+    "round_1": "1 Üçlü Küt",
+    "round_2": "1 Üçlü Seri",
+    "round_3": "2 Üçlü Küt",
+    "round_4": "2 Üçlü Seri",
+    "round_5": "1 Üçlü Küt + 1 Üçlü Seri",
+    "round_6": "1 Dörtlü Küt (Kare)",
+    "round_7": "1 Dörtlü Seri",
+    "round_8": "2 Dörtlü Küt",
+    "round_9": "2 Dörtlü Seri",
+    "round_10": "1 Dörtlü Küt + 1 Dörtlü Seri",
+    "round_11": "1 Beşli Seri",
+    "round_12": "Elden Bitme",
+    "round_end_title": "Tur {0} Bitti!",
+    "who_finished": "Bu turu kim bitirdi?",
+    "remaining_cards": "Elde Kalan Kart Değeri",
+    "remaining_cards_hint": "Sayıları topla (Joker=50)",
+    "add_penalty": "Ceza Ekle",
+    "islek": "İşlek Atma (+50)",
+    "hile": "Hile Yakalandı (+50)",
+    "penalty_for": "{0} için ceza:",
+    "save_round": "Turu Kaydet",
+    "round_end": "El Bitti!",
+    "round_winner": "🏆 {0} bu turu kazandı!",
+    "ground_card": "Yerden Kart",
+    "ground_card_penalty": "Yerden Kart Cezası ({0}/3 kaldı)",
+    "ground_card_limit": "Her oyuncu oyun boyunca en fazla 3 kez sırası dışında yerden kart alabilir.",
+    "last_round": "Son tur! 👑",
+    "game_rules": "Americano Kuralları",
+    "rules_text": "Her turda belirli bir kombinasyonu açmanız gerekir.\n\nYerden kart: Sıranızda düşen kartı alabilirsiniz. Diğer oyuncular desteden ceza kartı çekerek yerden alabilir (maks 3 kez).\n\nJoker = 50 puan \u2022 İşlek atma = 50 puan \u2022 Hile = 50 puan"
   }
 }

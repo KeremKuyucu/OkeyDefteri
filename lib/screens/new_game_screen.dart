@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/game_models.dart';
 import '../theme/app_theme.dart';
 import 'game_screen.dart';
+import 'americano_game_screen.dart';
 import '../services/localization_service.dart';
 
 class NewGameScreen extends StatefulWidget {
@@ -23,6 +24,7 @@ class _NewGameScreenState extends State<NewGameScreen>
   final _player2Controller = TextEditingController();
   final _player3Controller = TextEditingController();
   final _player4Controller = TextEditingController();
+  GameMode _selectedMode = GameMode.okey101;
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
@@ -78,18 +80,19 @@ class _NewGameScreenState extends State<NewGameScreen>
     final game = Game(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       createdAt: DateTime.now(),
+      gameMode: _selectedMode,
       team1: Team(
         id: 'team1_${DateTime.now().millisecondsSinceEpoch}',
         name: t1.isNotEmpty ? t1 : 'Takım 1',
         player1: Player(
           id: 'p1_${DateTime.now().millisecondsSinceEpoch}',
           name: p1,
-          seatIndex: 0, // Üst
+          seatIndex: 0,
         ),
         player2: Player(
           id: 'p3_${DateTime.now().millisecondsSinceEpoch}',
           name: p3,
-          seatIndex: 2, // Alt
+          seatIndex: 2,
         ),
       ),
       team2: Team(
@@ -98,20 +101,28 @@ class _NewGameScreenState extends State<NewGameScreen>
         player1: Player(
           id: 'p2_${DateTime.now().millisecondsSinceEpoch}',
           name: p2,
-          seatIndex: 1, // Sağ
+          seatIndex: 1,
         ),
         player2: Player(
           id: 'p4_${DateTime.now().millisecondsSinceEpoch}',
           name: p4,
-          seatIndex: 3, // Sol
+          seatIndex: 3,
         ),
       ),
     );
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => GameScreen(game: game)),
-    );
+    if (_selectedMode == GameMode.americano) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+            builder: (context) => AmericanoGameScreen(game: game)),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => GameScreen(game: game)),
+      );
+    }
   }
 
   @override
@@ -185,6 +196,10 @@ class _NewGameScreenState extends State<NewGameScreen>
                   ],
                 ),
               ),
+              const SizedBox(height: 20),
+
+              // Oyun modu seçimi
+              _buildModePicker(),
               const SizedBox(height: 24),
 
               // Takım 1
@@ -393,6 +408,118 @@ class _NewGameScreenState extends State<NewGameScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildModePicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          Localization.t('americano.select_mode'),
+          style: const TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(child: _modeChip(GameMode.okey101)),
+            const SizedBox(width: 10),
+            Expanded(child: _modeChip(GameMode.americano)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _modeChip(GameMode mode) {
+    final isSelected = _selectedMode == mode;
+    final isAmericano = mode == GameMode.americano;
+    final label = isAmericano
+        ? Localization.t('americano.mode_name')
+        : Localization.t('americano.mode_101');
+    final emoji = isAmericano ? '🃏' : '🀄';
+    final desc = isAmericano ? '12 tur • Bireysel' : 'Klasik • Takım';
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedMode = mode),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? (isAmericano ? AppTheme.goldGradient : null)
+              : null,
+          color: isSelected && !isAmericano
+              ? AppTheme.lightGreen.withValues(alpha: 0.15)
+              : isSelected
+              ? null
+              : AppTheme.surfaceCard,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected
+                ? (isAmericano ? AppTheme.accentGold : AppTheme.lightGreen)
+                : AppTheme.surfaceCardLight,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: (isAmericano
+                            ? AppTheme.accentGold
+                            : AppTheme.lightGreen)
+                        .withValues(alpha: 0.25),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 22)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: isSelected
+                          ? (isAmericano ? Colors.black : AppTheme.lightGreen)
+                          : AppTheme.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                  Text(
+                    desc,
+                    style: TextStyle(
+                      color: isSelected
+                          ? (isAmericano
+                              ? Colors.black54
+                              : AppTheme.textMuted)
+                          : AppTheme.textMuted,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle_rounded,
+                size: 18,
+                color: isAmericano ? Colors.black54 : AppTheme.lightGreen,
+              ),
+          ],
+        ),
       ),
     );
   }

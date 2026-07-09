@@ -47,6 +47,19 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     await StorageService.saveActiveGame(_game);
   }
 
+  /// Mevcut turda bitirme veya elde kalan ceza puanı var mı?
+  bool _hasTurnEndingScoreInCurrentRound() {
+    for (final p in _game.allPlayers) {
+      final hasEnd = p.scores.any(
+        (s) =>
+            s.roundNumber == _game.currentRound &&
+            (s.type.isFinishType || s.type == ScoreType.eldeKalanTaslar),
+      );
+      if (hasEnd) return true;
+    }
+    return false;
+  }
+
   Future<void> _openScoreDialog(Player player) async {
     if (_game.isFinished) {
       ScaffoldMessenger.of(
@@ -54,6 +67,53 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       ).showSnackBar(SnackBar(content: Text(Localization.t('game.finished'))));
       return;
     }
+
+    // Turu geçmeyi unuttun mu kontrolü
+    if (_hasTurnEndingScoreInCurrentRound()) {
+      final shouldContinue = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: AppTheme.surfaceDark,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: AppTheme.accentGold, size: 24),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  Localization.t('game.forgot_round_title'),
+                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            Localization.t('game.forgot_round_message'),
+            style: const TextStyle(color: AppTheme.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(
+                Localization.t('common.cancel'),
+                style: const TextStyle(color: AppTheme.textSecondary),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentGold,
+                foregroundColor: Colors.black,
+              ),
+              child: Text(Localization.t('game.forgot_round_continue')),
+            ),
+          ],
+        ),
+      );
+      if (shouldContinue != true) return;
+    }
+
+    if (!mounted) return;
     AudioVibrationService.playClickSound();
     AudioVibrationService.vibrate();
     final result = await showDialog<ScoreEntry>(
@@ -156,6 +216,72 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         backgroundColor: AppTheme.lightGreen,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  void _prevRound() {
+    if (_game.isFinished) return;
+    if (_game.currentRound <= 1) return;
+    AudioVibrationService.playClickSound();
+    AudioVibrationService.vibrateHeavy();
+
+    final prevRound = _game.currentRound - 1;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          Localization.t('game.prev_round_confirm_title'),
+          style: const TextStyle(color: AppTheme.textPrimary),
+        ),
+        content: Text(
+          Localization.t('game.prev_round_confirm', args: [prevRound]),
+          style: const TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              Localization.t('common.cancel'),
+              style: const TextStyle(color: AppTheme.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                // Mevcut turdaki tüm puanları sil
+                for (final p in _game.allPlayers) {
+                  p.scores.removeWhere(
+                    (s) => s.roundNumber == _game.currentRound,
+                  );
+                  p.isCiftliGidiyor = false;
+                }
+                _game.currentRound = prevRound;
+              });
+              _saveGame();
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    Localization.t('game.round', args: [_game.currentRound]),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  backgroundColor: AppTheme.dangerRed,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.dangerRed,
+            ),
+            child: Text(Localization.t('game.prev_round_undo')),
+          ),
+        ],
       ),
     );
   }
@@ -519,6 +645,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             ),
           ),
           if (!_game.isFinished) ...[
+            if (_game.currentRound > 1)
+              _bottomButton(
+                icon: Icons.skip_previous_rounded,
+                label: Localization.t('game.prev_round'),
+                onTap: _prevRound,
+                isDanger: true,
+              ),
             _bottomButton(
               icon: Icons.skip_next_rounded,
               label: Localization.t('game.next_round'),

@@ -6,6 +6,7 @@ import '../models/game_models.dart';
 import 'new_game_screen.dart';
 import 'past_games_screen.dart';
 import 'game_screen.dart';
+import 'americano_game_screen.dart';
 import '../widgets/developer_info.dart';
 import '../services/settings_service.dart';
 import '../services/localization_service.dart';
@@ -602,7 +603,9 @@ class _HomeScreenState extends State<HomeScreen>
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => GameScreen(game: _activeGame!),
+                builder: (context) => _activeGame!.isAmericano
+                    ? AmericanoGameScreen(game: _activeGame!)
+                    : GameScreen(game: _activeGame!),
               ),
             ).then((_) => _loadData());
           },

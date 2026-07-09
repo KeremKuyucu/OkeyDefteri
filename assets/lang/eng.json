@@ -76,10 +76,17 @@
     "history": "Score History",
     "stats": "Statistics",
     "next_round": "Next Round",
+    "prev_round": "Undo Round",
     "finished": "This game has ended. No changes can be made.",
     "process_cancel": "Are you sure you want to undo the last score entered for {0} by {1}?",
     "tour_start_info": "Round {0} started!",
-    "end_game_confirm": "Are you sure you want to end the game? Scores will be saved."
+    "end_game_confirm": "Are you sure you want to end the game? Scores will be saved.",
+    "prev_round_confirm_title": "Undo Round",
+    "prev_round_confirm": "Are you sure you want to go back to round {0}? All scores for the current round will be deleted.",
+    "prev_round_undo": "Undo",
+    "forgot_round_title": "Did You Forget to Advance the Round?",
+    "forgot_round_message": "It looks like penalties or a finish score were already entered for this round. Did you forget to advance the round? Are you sure you want to continue?",
+    "forgot_round_continue": "Yes, Continue"
   },
   "new_game": {
     "title": "New Game",
@@ -148,7 +155,11 @@
     "attigi_tasi_aldilar": "Thrown Tile Taken",
     "elde_kalan_taslar": "Tiles Left in Hand",
     "caused_by_okeyini_aldilar": "Who took their Okey?",
-    "caused_by_attigi_tasi_aldilar": "Who took the thrown tile?"
+    "caused_by_attigi_tasi_aldilar": "Who took the thrown tile?",
+    "americano_elde_kalan": "Remaining Card Value",
+    "americano_islek": "Misplay",
+    "americano_hile": "Caught Cheating",
+    "americano_kazandi": "Won the Round"
   },
   "nicknames": {
     "early_yanlis_el": "🤦♂️ First round and already a fucking idiot, why did you even come?",
@@ -187,5 +198,41 @@
     "late_score_500": "🥵 Someone get the defibrillator for this dying cunt",
     "late_score_300": "😮💨 Your ass is burning but you're still hanging on",
     "late_default": "🃏 Amateur piece of shit, still achieved nothing"
+  },
+  "americano": {
+    "mode_name": "Americano",
+    "mode_101": "101 (Okey)",
+    "select_mode": "Select Game Mode",
+    "round_rule": "Opening Rule",
+    "round_of": "Round {0} / 12",
+    "round_1": "1 Three-Card Set",
+    "round_2": "1 Three-Card Run",
+    "round_3": "2 Three-Card Sets",
+    "round_4": "2 Three-Card Runs",
+    "round_5": "1 Three-Card Set + 1 Three-Card Run",
+    "round_6": "1 Four-Card Set (Square)",
+    "round_7": "1 Four-Card Run",
+    "round_8": "2 Four-Card Sets",
+    "round_9": "2 Four-Card Runs",
+    "round_10": "1 Four-Card Set + 1 Four-Card Run",
+    "round_11": "1 Five-Card Run",
+    "round_12": "Finish from Hand",
+    "round_end_title": "Round {0} Over!",
+    "who_finished": "Who finished this round?",
+    "remaining_cards": "Remaining Card Value",
+    "remaining_cards_hint": "Sum card values (Joker=50)",
+    "add_penalty": "Add Penalty",
+    "islek": "Misplay (+50)",
+    "hile": "Caught Cheating (+50)",
+    "penalty_for": "Penalty for {0}:",
+    "save_round": "Save Round",
+    "round_end": "Round Over!",
+    "round_winner": "🏆 {0} won this round!",
+    "ground_card": "Ground Card",
+    "ground_card_penalty": "Ground Card Penalty ({0}/3 left)",
+    "ground_card_limit": "Each player may take a ground card out of turn at most 3 times per game.",
+    "last_round": "Final round! 👑",
+    "game_rules": "Americano Rules",
+    "rules_text": "Each round requires opening a specific combination.\n\nGround card: You may take the top discard on your turn. Other players may draw a penalty card to take it (max 3 times).\n\nJoker = 50 pts \u2022 Misplay = 50 pts \u2022 Cheating = 50 pts"
   }
 }

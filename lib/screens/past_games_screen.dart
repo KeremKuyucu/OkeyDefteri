@@ -3,6 +3,7 @@ import '../models/game_models.dart';
 import '../theme/app_theme.dart';
 import '../services/storage_service.dart';
 import 'game_screen.dart';
+import 'americano_game_screen.dart';
 import '../services/localization_service.dart';
 
 class PastGamesScreen extends StatefulWidget {
@@ -143,7 +144,9 @@ class _PastGamesScreenState extends State<PastGamesScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => GameScreen(game: game),
+                builder: (context) => game.isAmericano
+                    ? AmericanoGameScreen(game: game)
+                    : GameScreen(game: game),
               ),
             ).then((_) => _loadGames());
           },
@@ -176,6 +179,34 @@ class _PastGamesScreenState extends State<PastGamesScreen> {
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        // Oyun modu badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: game.isAmericano
+                                ? AppTheme.accentGold.withValues(alpha: 0.12)
+                                : AppTheme.lightGreen.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: game.isAmericano
+                                  ? AppTheme.accentGold.withValues(alpha: 0.35)
+                                  : AppTheme.lightGreen.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: Text(
+                            game.isAmericano ? '🃏 AMR' : '🀄 101',
+                            style: TextStyle(
+                              color: game.isAmericano
+                                  ? AppTheme.accentGold
+                                  : AppTheme.lightGreen,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.3,
                             ),
                           ),
                         ),
