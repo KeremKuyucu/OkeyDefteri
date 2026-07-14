@@ -227,7 +227,7 @@
     "add_penalty": "Add Penalty",
     "islek": "Misplay (+50)",
     "hile": "Caught Cheating (+50)",
-    "takim_yok_okey_aldi": "Took Okey Without Team (+50)",
+    "takim_yok_okey_aldi": "Took Okey (+50)",
     "okey_atti": "Discarded Okey (+50)",
     "yanlis_el_acti": "Wrong Hand Open (+50)",
     "penalty_for": "Penalty for {0}:",

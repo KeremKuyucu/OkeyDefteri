@@ -10,6 +10,7 @@ import 'americano_game_screen.dart';
 import '../widgets/developer_info.dart';
 import '../services/settings_service.dart';
 import '../services/localization_service.dart';
+import '../services/update_checker_service.dart';
 import '../main.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -45,6 +46,15 @@ class _HomeScreenState extends State<HomeScreen>
     );
     _animController.forward();
     _loadData();
+    _checkForUpdates();
+  }
+
+  void _checkForUpdates() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        UpdateService.check(context);
+      }
+    });
   }
 
   Future<void> _loadData() async {
@@ -83,18 +93,25 @@ class _HomeScreenState extends State<HomeScreen>
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: AppTheme.surfaceDark,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) => StatefulBuilder(
         builder: (context, setBottomSheetState) {
-          return Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          return SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(context).padding.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 Text(
                   Localization.t('settings.title'),
                   style: TextStyle(
@@ -133,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen>
                           newValue != Localization.currentLanguage) {
                         await SettingsService.setLanguage(newValue);
                         await Localization.changeLanguage(newValue);
-                        if (mounted) {
+                        if (context.mounted) {
                           Navigator.pop(context);
                           OkeyDefteriApp.restartApp(context);
                         }
@@ -302,10 +319,10 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ],
             ),
-          );
-        },
-      ),
-    );
+          ),
+        );
+      },
+    ));
   }
 
   void _showImportExportDialog() async {
@@ -371,7 +388,7 @@ class _HomeScreenState extends State<HomeScreen>
             onPressed: () async {
               try {
                 await StorageService.importData(controller.text);
-                if (mounted) {
+                if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -383,11 +400,13 @@ class _HomeScreenState extends State<HomeScreen>
                   OkeyDefteriApp.restartApp(context);
                 }
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(Localization.t('settings.invalid_json')),
-                  ),
-                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(Localization.t('settings.invalid_json')),
+                    ),
+                  );
+                }
               }
             },
             child: Text(

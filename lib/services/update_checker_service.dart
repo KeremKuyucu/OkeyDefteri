@@ -33,13 +33,16 @@ class UpdateService {
       final response = await http
           .get(
             Uri.parse(
-                'https://api.github.com/repos/$repoOwner/$repoName/releases/latest'),
+              'https://api.github.com/repos/$repoOwner/$repoName/releases/latest',
+            ),
           )
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
+        debugPrint('Güncelleme kontrolü başarılı');
         final data = json.decode(response.body);
-        final downloadUrl = data['html_url'] ??
+        final downloadUrl =
+            data['html_url'] ??
             'https://github.com/$repoOwner/$repoName/releases';
         final remoteVersion = (data['tag_name'] as String? ?? '0.0.0')
             .replaceAll(RegExp(r'^v'), '');
@@ -61,8 +64,13 @@ class UpdateService {
     }
   }
 
-  static void _showUpdateDialog(BuildContext context, String local,
-      String remote, String notes, String url) {
+  static void _showUpdateDialog(
+    BuildContext context,
+    String local,
+    String remote,
+    String notes,
+    String url,
+  ) {
     final cleanNotes = notes
         .replaceAll(RegExp(r'#{1,6}\s?'), '')
         .replaceAll(RegExp(r'\*\*|__'), '')
@@ -73,15 +81,19 @@ class UpdateService {
       barrierDismissible: true,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
           title: Row(
             children: [
               const Icon(Icons.system_update, color: Colors.blue),
               const SizedBox(width: 10),
               Expanded(
-                  child: Text(Localization.t('version.new_available'),
-                      style: const TextStyle(fontSize: 18))),
+                child: Text(
+                  Localization.t('version.new_available'),
+                  style: const TextStyle(fontSize: 18),
+                ),
+              ),
             ],
           ),
           content: Column(
@@ -100,12 +112,19 @@ class UpdateService {
                     Text('v$local', style: const TextStyle(color: Colors.grey)),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Icon(Icons.arrow_forward,
-                          size: 16, color: Colors.green),
+                      child: Icon(
+                        Icons.arrow_forward,
+                        size: 16,
+                        color: Colors.green,
+                      ),
                     ),
-                    Text('v$remote',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.green)),
+                    Text(
+                      'v$remote',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -122,8 +141,10 @@ class UpdateService {
           ),
           actions: <Widget>[
             TextButton(
-              child: Text(Localization.t('version.not_now'),
-                  style: const TextStyle(color: Colors.grey)),
+              child: Text(
+                Localization.t('version.not_now'),
+                style: const TextStyle(color: Colors.grey),
+              ),
               onPressed: () => Navigator.of(dialogContext).pop(),
             ),
             ElevatedButton(
@@ -131,15 +152,13 @@ class UpdateService {
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               onPressed: () async {
                 final Uri uri = Uri.parse(url);
                 try {
-                  await launchUrl(
-                    uri,
-                    mode: LaunchMode.externalApplication,
-                  );
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
                 } catch (e) {
                   debugPrint('URL başlatılamadı: $e');
                 }

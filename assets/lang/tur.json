@@ -226,7 +226,7 @@
     "add_penalty": "Ceza Ekle",
     "islek": "İşlek Atma (+50)",
     "hile": "Hile Yakalandı (+50)",
-    "takim_yok_okey_aldi": "Takım Yok Okey Aldı (+50)",
+    "takim_yok_okey_aldi": "Okeyini Aldılar (+50)",
     "okey_atti": "Okey Attı (+50)",
     "yanlis_el_acti": "Yanlış El Açtı (+50)",
     "penalty_for": "{0} için ceza:",

@@ -46,3 +46,6 @@ app.*.map.json
 
 # Vercel
 .vercel/
+
+# Heap Dumps
+*.hprof

@@ -835,7 +835,7 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
               const SizedBox(height: 8),
               _buildScoreButton(
                 ScoreType.eldenBitti,
-                color: AppTheme.successGreen,
+                color: const Color(0xFF42A5F5),
                 icon: Icons.emoji_events_rounded,
               ),
               const SizedBox(height: 8),
@@ -843,6 +843,12 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
                 ScoreType.okeyAtarakBitti,
                 color: const Color(0xFF7E57C2),
                 icon: Icons.style_rounded,
+              ),
+              const SizedBox(height: 8),
+              _buildScoreButton(
+                ScoreType.okeyAtarakEldenBitti,
+                color: const Color(0xFFFF7043),
+                icon: Icons.auto_awesome_rounded,
               ),
               const SizedBox(height: 16),
 
