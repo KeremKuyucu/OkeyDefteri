@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../models/game_models.dart';
 import '../theme/app_theme.dart';
 import '../services/storage_service.dart';
 import '../widgets/player_card.dart';
 import '../widgets/team_score_bar.dart';
 import '../widgets/americano_score_dialog.dart';
+import '../widgets/ad_banner_widget.dart';
 import 'score_history_screen.dart';
 import '../services/settings_service.dart';
 import '../services/localization_service.dart';
@@ -25,6 +28,40 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
   late Animation<double> _pulseAnimation;
   late AnimationController _bannerController;
   late Animation<double> _bannerAnimation;
+
+  InterstitialAd? _interstitialAd;
+  bool _isInterstitialAdLoaded = false;
+  
+  String get _interstitialAdUnitId {
+    if (kDebugMode) {
+      return defaultTargetPlatform == TargetPlatform.android
+          ? 'ca-app-pub-3940256099942544/1033173712'
+          : 'ca-app-pub-3940256099942544/4411468910';
+    }
+    return defaultTargetPlatform == TargetPlatform.android
+        ? 'ca-app-pub-4674396016131447/8600025809'
+        : 'ca-app-pub-3940256099942544/4411468910';
+  }
+
+  void _loadInterstitialAd() {
+    if (kIsWeb) return;
+    InterstitialAd.load(
+      adUnitId: _interstitialAdUnitId,
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          debugPrint('InterstitialAd loaded.');
+          _interstitialAd = ad;
+          _isInterstitialAdLoaded = true;
+        },
+        onAdFailedToLoad: (LoadAdError error) {
+          debugPrint('InterstitialAd failed to load: $error');
+          _isInterstitialAdLoaded = false;
+          _interstitialAd = null;
+        },
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -47,12 +84,14 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
       parent: _bannerController,
       curve: Curves.easeOut,
     );
+    _loadInterstitialAd();
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
     _bannerController.dispose();
+    _interstitialAd?.dispose();
     super.dispose();
   }
 
@@ -258,14 +297,7 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
     );
   }
 
-  void _nextRound() {
-    if (_game.isFinished) return;
-    if (_game.currentRound >= 12) {
-      _endGame();
-      return;
-    }
-    AudioVibrationService.playClickSound();
-    AudioVibrationService.vibrateHeavy();
+  void _advanceRound() {
     setState(() {
       _game.currentRound++;
     });
@@ -291,6 +323,38 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
+  }
+
+  void _nextRound() {
+    if (_game.isFinished) return;
+    if (_game.currentRound >= 12) {
+      _endGame();
+      return;
+    }
+    AudioVibrationService.playClickSound();
+    AudioVibrationService.vibrateHeavy();
+    
+    if (_isInterstitialAdLoaded && _interstitialAd != null) {
+      _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) {
+          ad.dispose();
+          _isInterstitialAdLoaded = false;
+          _interstitialAd = null;
+          _advanceRound();
+          _loadInterstitialAd();
+        },
+        onAdFailedToShowFullScreenContent: (ad, error) {
+          ad.dispose();
+          _isInterstitialAdLoaded = false;
+          _interstitialAd = null;
+          _advanceRound();
+          _loadInterstitialAd();
+        },
+      );
+      _interstitialAd!.show();
+    } else {
+      _advanceRound();
+    }
   }
 
   void _prevRound() {
@@ -497,11 +561,7 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
             TeamScoreBar(team1: _game.team1, team2: _game.team2),
             const SizedBox(height: 6),
             Expanded(child: _buildGameTable()),
-            Container(
-              height: 50,
-              width: double.infinity,
-              color: Colors.transparent,
-            ),
+            const AdBannerWidget(),
             _buildBottomBar(),
           ],
         ),
