@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../models/game_models.dart';
 import '../theme/app_theme.dart';
 import '../services/storage_service.dart';
 import '../widgets/player_card.dart';
 import '../widgets/team_score_bar.dart';
 import '../widgets/score_input_dialog.dart';
+import '../widgets/ad_banner_widget.dart';
 import 'score_history_screen.dart';
 import 'stats_screen.dart';
 import '../services/settings_service.dart';
@@ -23,6 +26,40 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late Game _game;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  
+  InterstitialAd? _interstitialAd;
+  bool _isInterstitialAdLoaded = false;
+  
+  String get _interstitialAdUnitId {
+    if (kDebugMode) {
+      return defaultTargetPlatform == TargetPlatform.android
+          ? 'ca-app-pub-3940256099942544/1033173712'
+          : 'ca-app-pub-3940256099942544/4411468910';
+    }
+    return defaultTargetPlatform == TargetPlatform.android
+        ? 'ca-app-pub-4674396016131447/8600025809'
+        : 'ca-app-pub-3940256099942544/4411468910';
+  }
+
+  void _loadInterstitialAd() {
+    if (kIsWeb) return;
+    InterstitialAd.load(
+      adUnitId: _interstitialAdUnitId,
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          debugPrint('InterstitialAd loaded.');
+          _interstitialAd = ad;
+          _isInterstitialAdLoaded = true;
+        },
+        onAdFailedToLoad: (LoadAdError error) {
+          debugPrint('InterstitialAd failed to load: $error');
+          _isInterstitialAdLoaded = false;
+          _interstitialAd = null;
+        },
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -35,11 +72,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _pulseAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+    _loadInterstitialAd();
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
+    _interstitialAd?.dispose();
     super.dispose();
   }
 
@@ -123,8 +162,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => _BulkRoundEndDialog(
-        players: _game.allPlayers,
-        currentRound: _game.currentRound,
+        game: _game,
       ),
     );
 
@@ -321,10 +359,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _saveGame();
   }
 
-  void _nextRound() {
-    if (_game.isFinished) return;
-    AudioVibrationService.playClickSound();
-    AudioVibrationService.vibrateHeavy();
+  void _advanceRound() {
     setState(() {
       _game.currentRound++;
       for (final p in _game.allPlayers) {
@@ -343,6 +378,34 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
+  }
+
+  void _nextRound() {
+    if (_game.isFinished) return;
+    AudioVibrationService.playClickSound();
+    AudioVibrationService.vibrateHeavy();
+    
+    if (_isInterstitialAdLoaded && _interstitialAd != null) {
+      _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) {
+          ad.dispose();
+          _isInterstitialAdLoaded = false;
+          _interstitialAd = null;
+          _advanceRound();
+          _loadInterstitialAd();
+        },
+        onAdFailedToShowFullScreenContent: (ad, error) {
+          ad.dispose();
+          _isInterstitialAdLoaded = false;
+          _interstitialAd = null;
+          _advanceRound();
+          _loadInterstitialAd();
+        },
+      );
+      _interstitialAd!.show();
+    } else {
+      _advanceRound();
+    }
   }
 
   void _prevRound() {
@@ -474,14 +537,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             // Oyun masası
             Expanded(child: _buildGameTable()),
 
-            // TODO: Banner reklam buraya eklenecek
-            Container(
-              height: 50,
-              width: double.infinity,
-              color: Colors.transparent,
-              alignment: Alignment.center,
-              child: const Text('Banner Ad Placeholder', style: TextStyle(color: Colors.transparent)),
-            ),
+            // AdMob Banner Reklamı
+            const AdBannerWidget(),
 
             // Alt bar
             _buildBottomBar(),
@@ -870,12 +927,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
 /// Toplu tur sonu puan giriş dialogu
 class _BulkRoundEndDialog extends StatefulWidget {
-  final List<Player> players;
-  final int currentRound;
+  final Game game;
 
   const _BulkRoundEndDialog({
-    required this.players,
-    required this.currentRound,
+    required this.game,
   });
 
   @override
@@ -904,7 +959,7 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
   @override
   void initState() {
     super.initState();
-    for (final p in widget.players) {
+    for (final p in widget.game.allPlayers) {
       _controllers[p.id] = TextEditingController();
     }
   }
@@ -917,10 +972,19 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
     super.dispose();
   }
 
+  bool _isTeammateOfWinner(Player p) {
+    if (_winnerId == null) return false;
+    if (_winnerId == p.id) return false;
+    final winner = widget.game.allPlayers.firstWhere((pl) => pl.id == _winnerId);
+    final winnerTeam = widget.game.getTeamForPlayer(winner);
+    return winnerTeam.player1.id == p.id || winnerTeam.player2.id == p.id;
+  }
+
   bool get _canSave {
     if (_winnerId == null) return false;
-    for (final p in widget.players) {
+    for (final p in widget.game.allPlayers) {
       if (p.id == _winnerId) continue;
+      if (_isTeammateOfWinner(p)) continue;
       final text = _controllers[p.id]?.text ?? '';
       if (text.isEmpty) return false;
     }
@@ -947,7 +1011,7 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      '${Localization.t('game.round', args: [widget.currentRound])} — ${Localization.t('game.end_game')}',
+                      '${Localization.t('game.round', args: [widget.game.currentRound])} — ${Localization.t('game.end_game')}',
                       style: const TextStyle(
                         color: AppTheme.textPrimary,
                         fontSize: 18,
@@ -1041,7 +1105,7 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                 ),
               ),
               const SizedBox(height: 8),
-              ...widget.players.map((p) {
+              ...widget.game.allPlayers.map((p) {
                 final isWinner = _winnerId == p.id;
                 final color = _finishColors[_finishType] ?? AppTheme.successGreen;
                 return Padding(
@@ -1137,37 +1201,51 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                                 ),
                               ),
                             if (!isWinner)
-                              SizedBox(
-                                width: 70,
-                                child: TextField(
-                                  controller: _controllers[p.id],
-                                  keyboardType: TextInputType.number,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: AppTheme.textPrimary,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: '0',
-                                    hintStyle: const TextStyle(
+                              if (_isTeammateOfWinner(p))
+                                const SizedBox(
+                                  width: 70,
+                                  child: Text(
+                                    '-',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
                                       color: AppTheme.textMuted,
-                                    ),
-                                    isDense: true,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 8,
-                                    ),
-                                    filled: true,
-                                    fillColor: AppTheme.surfaceCardLight,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide.none,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                  onChanged: (_) => setState(() {}),
+                                )
+                              else
+                                SizedBox(
+                                  width: 70,
+                                  child: TextField(
+                                    controller: _controllers[p.id],
+                                    keyboardType: TextInputType.number,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: AppTheme.textPrimary,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: '0',
+                                      hintStyle: const TextStyle(
+                                        color: AppTheme.textMuted,
+                                      ),
+                                      isDense: true,
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 8,
+                                      ),
+                                      filled: true,
+                                      fillColor: AppTheme.surfaceCardLight,
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                    ),
+                                    onChanged: (_) => setState(() {}),
+                                  ),
                                 ),
-                              ),
                           ],
                         ),
                       ),
@@ -1184,10 +1262,14 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                   onPressed: _canSave
                       ? () {
                           final scores = <String, int>{};
-                          for (final p in widget.players) {
+                          for (final p in widget.game.allPlayers) {
                             if (p.id == _winnerId) continue;
-                            scores[p.id] =
-                                int.tryParse(_controllers[p.id]?.text ?? '') ?? 0;
+                            if (_isTeammateOfWinner(p)) {
+                              scores[p.id] = 0;
+                            } else {
+                              scores[p.id] =
+                                  int.tryParse(_controllers[p.id]?.text ?? '') ?? 0;
+                            }
                           }
                           Navigator.pop(context, {
                             'winnerId': _winnerId,

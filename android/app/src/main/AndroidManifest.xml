@@ -5,6 +5,12 @@
         android:label="Okey Defteri"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        
+        <!-- Google AdMob App ID -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-4674396016131447~4867710069"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
