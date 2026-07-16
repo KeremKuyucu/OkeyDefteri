@@ -31,14 +31,15 @@ android {
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
-    splits {
-        abi {
-            isEnable = true // ABI başına ayrı APK oluştur
-            reset()     // Varsayılan ayarları sıfırla
-            include("armeabi-v7a", "arm64-v8a", "x86_64") // Desteklenecek mimariler
-            isUniversalApk = true // Tek bir evrensel APK oluşturma
-        }
-    }
+    // AAB derlerken çakışma yaptığı için splits bloğu yorum satırına alındı
+    // splits {
+    //     abi {
+    //         isEnable = true // ABI başına ayrı APK oluştur
+    //         reset()     // Varsayılan ayarları sıfırla
+    //         include("armeabi-v7a", "arm64-v8a", "x86_64") // Desteklenecek mimariler
+    //         isUniversalApk = true // Tek bir evrensel APK oluşturma
+    //     }
+    // }
     signingConfigs {
         if (hasValidKeystore) {
             create("release") {
