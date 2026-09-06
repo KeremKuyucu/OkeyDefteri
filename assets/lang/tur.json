@@ -39,6 +39,23 @@
     "keep_enabled": "Açık Kalsın",
     "telemetry_message": "Bu veri sizinle asla ilişkilendirilemez. Tek amacı uygulamanın günlük kullanım sayısını öğrenmektir.\n\nGönderilen örnek ping:\n{\n  \"uid\": \"123e4567-e89b-12d3...\",\n  \"timestamp\": \"2026-05-25T14:30:00\",\n  \"app\": \"okey_defteri\",\n  \"event\": \"app_opened_daily\",\n  \"platform\": \"mobile\" // veya \"web\"\n}"
   },
+  "cloud": {
+    "title": "Bulut Yedekleme",
+    "desc": "Oyunlarınızı yedekleyin, cihaz değiştirince geri yükleyin.",
+    "active": "Bulut yedekleme aktif ✅",
+    "restore": "Yedeği Geri Yükle",
+    "restore_subtitle": "Buluttaki oyunları cihaza indir",
+    "push_all": "Tümünü Yükle",
+    "push_all_subtitle": "Tüm yerel oyunları buluta gönder",
+    "sign_out": "Çıkış Yap",
+    "sign_in_google": "Google ile Giriş Yap",
+    "restore_success": "{0} oyun geri yüklendi!",
+    "up_to_date": "Yedek güncel, yeni oyun bulunamadı.",
+    "push_success": "{0} oyun buluta yüklendi.",
+    "sign_in_error": "Giriş başarısız: {0}",
+    "cancelled": "Giriş iptal edildi.",
+    "failed": "Giriş başarısız."
+  },
   "about": {
     "title": "Hakkında",
     "app_name": "Okey Defteri",
@@ -85,7 +102,15 @@
     "prev_round_undo": "Geri Al",
     "forgot_round_title": "Turu Geçmeyi Unuttun!",
     "forgot_round_message": "Bu turda zaten elde kalan ceza veya bitirme puanı girilmiş. Turu geçmeyi unuttun mu? Devam etmek istediğine emin misin?",
-    "forgot_round_continue": "Evet, Devam Et"
+    "forgot_round_continue": "Evet, Devam Et",
+    "undo_score_title": "Son Puanı Geri Al",
+    "round_winner_mode": "Biri Bitirdi",
+    "round_no_winner_mode": "Kimse Bitmedi (Taş Bitti)",
+    "who_finished": "Kim Bitirdi?",
+    "how_finished": "Nasıl Bitti?",
+    "no_winner_desc": "Yerde taş bitti, kimse elini açıp bitiremedi. Herkes elindeki kalan taş puanını yazar.",
+    "no_winner_saved": "Kimse bitmedi — Elde kalan taş puanları kaydedildi.",
+    "points_with_win": "+1 🏆 Galibiyet"
   },
   "new_game": {
     "title": "Yeni Oyun",
@@ -103,7 +128,14 @@
     "player_3_bottom": "Oyuncu 3 (Alt)",
     "player_4_left": "Oyuncu 4 (Sol)",
     "start_game": "OYUNU BAŞLAT",
-    "team_name": "Takım İsmi"
+    "team_name": "Takım İsmi",
+    "americano_mode": "Americano Modu",
+    "mode_team": "Takımlı",
+    "mode_team_desc": "2 takım • Bireysel puan",
+    "mode_solo": "Tekli",
+    "mode_solo_desc": "4 bireysel • Takımsız",
+    "desc_americano": "12 tur • Bireysel",
+    "desc_101": "Klasik • Takım"
   },
   "past_games": {
     "title": "Geçmiş Oyunlar",
@@ -161,7 +193,8 @@
     "americano_kazandi": "Turu Kazandı",
     "americano_takim_yok_okey_aldi": "Takım Yok Okeyini Alma",
     "americano_okey_atti": "Okey Atma",
-    "americano_yanlis_el_acti": "Yanlış El Açma"
+    "americano_yanlis_el_acti": "Yanlış El Açma",
+    "americano_islek_atarak_bitti": "İşlek Atarak Bitti"
   },
   "nicknames": {
     "early_yanlis_el": "🤦♂️ Daha ilk el amk malı, niye geldin ki?",
@@ -229,6 +262,7 @@
     "takim_yok_okey_aldi": "Okeyini Aldılar (+50)",
     "okey_atti": "Okey Attı (+50)",
     "yanlis_el_acti": "Yanlış El Açtı (+50)",
+    "islek_atarak_bitti": "İşlek Atarak Bitti (+100)",
     "penalty_for": "{0} için ceza:",
     "save_round": "Turu Kaydet",
     "round_end": "El Bitti!",

@@ -111,7 +111,8 @@ class _NewGameScreenState extends State<NewGameScreen>
       ),
     );
 
-    if (_selectedMode == GameMode.americano) {
+    if (_selectedMode == GameMode.americano ||
+        _selectedMode == GameMode.americanoSolo) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -413,6 +414,8 @@ class _NewGameScreenState extends State<NewGameScreen>
   }
 
   Widget _buildModePicker() {
+    final isAmericanoSelected = _selectedMode == GameMode.americano ||
+        _selectedMode == GameMode.americanoSolo;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -433,21 +436,143 @@ class _NewGameScreenState extends State<NewGameScreen>
             Expanded(child: _modeChip(GameMode.americano)),
           ],
         ),
+        // Americano alt seçeneği: Takımlı vs Tekli
+        if (isAmericanoSelected) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceCard,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppTheme.accentGold.withValues(alpha: 0.25),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  Localization.t('new_game.americano_mode'),
+                  style: const TextStyle(
+                    color: AppTheme.accentGold,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _americanoSubChip(
+                        mode: GameMode.americano,
+                        label: Localization.t('new_game.mode_team'),
+                        emoji: '🤝',
+                        desc: Localization.t('new_game.mode_team_desc'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _americanoSubChip(
+                        mode: GameMode.americanoSolo,
+                        label: Localization.t('new_game.mode_solo'),
+                        emoji: '👤',
+                        desc: Localization.t('new_game.mode_solo_desc'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
 
-  Widget _modeChip(GameMode mode) {
+  Widget _americanoSubChip({
+    required GameMode mode,
+    required String label,
+    required String emoji,
+    required String desc,
+  }) {
     final isSelected = _selectedMode == mode;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedMode = mode),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppTheme.accentGold.withValues(alpha: 0.15)
+              : AppTheme.surfaceCardLight,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected
+                ? AppTheme.accentGold
+                : AppTheme.surfaceCardLight,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: isSelected
+                          ? AppTheme.accentGold
+                          : AppTheme.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    desc,
+                    style: const TextStyle(
+                        color: AppTheme.textMuted, fontSize: 10),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle_rounded,
+                  size: 14, color: AppTheme.accentGold),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _modeChip(GameMode mode) {
+    // Americano chip: hem americano hem americanoSolo seçildiğinde "aktif" görünsün
+    final isSelected = _selectedMode == mode ||
+        (mode == GameMode.americano &&
+            (_selectedMode == GameMode.americano ||
+                _selectedMode == GameMode.americanoSolo));
     final isAmericano = mode == GameMode.americano;
     final label = isAmericano
         ? Localization.t('americano.mode_name')
         : Localization.t('americano.mode_101');
     final emoji = isAmericano ? '🃏' : '🀄';
-    final desc = isAmericano ? '12 tur • Bireysel' : 'Klasik • Takım';
+    final desc = isAmericano
+        ? Localization.t('new_game.desc_americano')
+        : Localization.t('new_game.desc_101');
 
     return GestureDetector(
-      onTap: () => setState(() => _selectedMode = mode),
+      onTap: () => setState(() {
+        if (isAmericano) {
+          // Americano seçilince varsayılan takımlı mod
+          _selectedMode = GameMode.americano;
+        } else {
+          _selectedMode = mode;
+        }
+      }),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),

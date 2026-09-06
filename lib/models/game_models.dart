@@ -2,7 +2,7 @@ import 'package:okey_defteri/services/settings_service.dart';
 import '../services/localization_service.dart';
 
 /// Oyun modu
-enum GameMode { okey101, americano }
+enum GameMode { okey101, americano, americanoSolo }
 
 /// Skor giriş türleri
 enum ScoreType {
@@ -11,9 +11,9 @@ enum ScoreType {
   okeyiniAldilar, // +101 Okeyini aldılar
   yanlisElActi, // +101 Yanlış el açtı
   normalBitti, // -101 Normal bitti (elle kapattı)
-  eldenBitti, // -101 Elden bitti
-  okeyAtarakBitti, // -101 Okey atarak bitti
-  okeyAtarakEldenBitti, // 2x + -101 Okey atarak elden bitti
+  eldenBitti, // -202 Elden bitti
+  okeyAtarakBitti, // -202 Okey atarak bitti
+  okeyAtarakEldenBitti, // 2x + -404 Okey atarak elden bitti
   acamadi, // +202 Açamadı
   attigiTasiAldilar, // Manuel puan - Attığı taşı aldılar
   eldeKalanTaslar, // Manuel puan - Elde kalan taşlar
@@ -25,7 +25,9 @@ enum ScoreType {
   americanoTakimYokOkeyAldi, // Takım yok okeyini alma cezası +50 (Americano)
   americanoOkeyAtti, // Okey atma cezası +50 (Americano)
   americanoYanlisElActi, // Yanlış el açma cezası +50 (Americano)
+  americanoIslekAtarakBitti, // İşlek atarak bitti +100 puan ceza (Americano)
 }
+
 
 extension ScoreTypeExtension on ScoreType {
   String get label {
@@ -66,6 +68,8 @@ extension ScoreTypeExtension on ScoreType {
         return Localization.t('score_types.americano_okey_atti');
       case ScoreType.americanoYanlisElActi:
         return Localization.t('score_types.americano_yanlis_el_acti');
+      case ScoreType.americanoIslekAtarakBitti:
+        return Localization.t('score_types.americano_islek_atarak_bitti');
     }
   }
 
@@ -107,6 +111,8 @@ extension ScoreTypeExtension on ScoreType {
         return '🃏❌';
       case ScoreType.americanoYanlisElActi:
         return '❌';
+      case ScoreType.americanoIslekAtarakBitti:
+        return '🎯🏁';
     }
   }
 
@@ -148,6 +154,8 @@ extension ScoreTypeExtension on ScoreType {
         return 50;
       case ScoreType.americanoYanlisElActi:
         return 50;
+      case ScoreType.americanoIslekAtarakBitti:
+        return 100;
     }
   }
 
@@ -157,12 +165,26 @@ extension ScoreTypeExtension on ScoreType {
         this == ScoreType.americanoEldeKalan;
   }
 
+  /// Bu tür Americano'ya özel ek ceza tipi mi?
+  bool get isAmericanoPenalty {
+    return this == ScoreType.americanoIslek ||
+        this == ScoreType.americanoHile ||
+        this == ScoreType.americanoTakimYokOkeyAldi ||
+        this == ScoreType.americanoOkeyAtti ||
+        this == ScoreType.americanoYanlisElActi ||
+        this == ScoreType.americanoIslekAtarakBitti;
+  }
+
   /// Americano'ya mı özel?
   bool get isAmericano {
     return this == ScoreType.americanoEldeKalan ||
         this == ScoreType.americanoIslek ||
         this == ScoreType.americanoHile ||
-        this == ScoreType.americanoKazandi;
+        this == ScoreType.americanoKazandi ||
+        this == ScoreType.americanoTakimYokOkeyAldi ||
+        this == ScoreType.americanoOkeyAtti ||
+        this == ScoreType.americanoYanlisElActi ||
+        this == ScoreType.americanoIslekAtarakBitti;
   }
 
   /// Bu tür bir bitirme türü mü?
@@ -170,7 +192,9 @@ extension ScoreTypeExtension on ScoreType {
     return this == ScoreType.normalBitti ||
         this == ScoreType.eldenBitti ||
         this == ScoreType.okeyAtarakBitti ||
-        this == ScoreType.okeyAtarakEldenBitti;
+        this == ScoreType.okeyAtarakEldenBitti ||
+        this == ScoreType.americanoKazandi ||
+        this == ScoreType.americanoIslekAtarakBitti;
   }
 
   /// Bu ceza türü için "kim yaptı?" sorusu sorulacak mı?
@@ -225,7 +249,7 @@ class ScoreEntry {
 
   Map<String, dynamic> toJson() => {
     'id': id,
-    'type': type.index,
+    'type': type.name,
     'points': points,
     'isCiftli': isCiftli,
     'isOkeyFinish': isOkeyFinish,
@@ -237,7 +261,7 @@ class ScoreEntry {
 
   factory ScoreEntry.fromJson(Map<String, dynamic> json) => ScoreEntry(
     id: json['id'],
-    type: ScoreType.values[json['type']],
+    type: _parseScoreType(json['type']),
     points: json['points'],
     isCiftli: json['isCiftli'] ?? false,
     isOkeyFinish: json['isOkeyFinish'] ?? false,
@@ -246,6 +270,16 @@ class ScoreEntry {
     roundNumber: json['roundNumber'],
     causedByPlayerId: json['causedByPlayerId'],
   );
+
+  /// Geriye dönük uyumluluk: eski kayıtlarda int index, yenilerde String name
+  static ScoreType _parseScoreType(dynamic raw) {
+    if (raw is int) return ScoreType.values[raw];
+    try {
+      return ScoreType.values.byName(raw as String);
+    } catch (_) {
+      return ScoreType.eldeKalanTaslar; // bilinmeyen değer için fallback
+    }
+  }
 }
 
 /// Oyuncu modeli
@@ -303,7 +337,10 @@ class Player {
     int normalBitti = scores
         .where((s) => s.type == ScoreType.normalBitti)
         .length;
-    int toplamBitirme = okeyBitti + okeyEldenBitti + eldenBitti + normalBitti;
+    int americanoKazandi = scores
+        .where((s) => s.type == ScoreType.americanoKazandi)
+        .length;
+    int toplamBitirme = okeyBitti + okeyEldenBitti + eldenBitti + normalBitti + americanoKazandi;
 
     int islekAtti = scores.where((s) => s.type == ScoreType.islekAtti).length;
     int okeyAtti = scores.where((s) => s.type == ScoreType.okeyAtti).length;
@@ -593,7 +630,10 @@ class Game {
     return null;
   }
 
-  bool get isAmericano => gameMode == GameMode.americano;
+  bool get isAmericano =>
+      gameMode == GameMode.americano || gameMode == GameMode.americanoSolo;
+
+  bool get isAmericanoSolo => gameMode == GameMode.americanoSolo;
 
   /// Americano'da maksimum 12 tur var
   bool get isLastAmericanoRound => isAmericano && currentRound >= 12;
@@ -606,7 +646,7 @@ class Game {
     'team2': team2.toJson(),
     'currentRound': currentRound,
     'isFinished': isFinished,
-    'gameMode': gameMode.index,
+    'gameMode': gameMode.name,
   };
 
   factory Game.fromJson(Map<String, dynamic> json) => Game(
@@ -617,8 +657,17 @@ class Game {
     team2: Team.fromJson(json['team2']),
     currentRound: json['currentRound'],
     isFinished: json['isFinished'] ?? false,
-    gameMode: json['gameMode'] != null
-        ? GameMode.values[json['gameMode']]
-        : GameMode.okey101,
+    gameMode: _parseGameMode(json['gameMode']),
   );
+
+  /// Geriye dönük uyumluluk: eski kayıtlarda int index, yenilerde String name
+  static GameMode _parseGameMode(dynamic raw) {
+    if (raw == null) return GameMode.okey101;
+    if (raw is int) return GameMode.values[raw];
+    try {
+      return GameMode.values.byName(raw as String);
+    } catch (_) {
+      return GameMode.okey101;
+    }
+  }
 }

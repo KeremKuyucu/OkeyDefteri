@@ -8,7 +8,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-val keystorePropertiesFile = file("C:\\Users\\Kerem\\Projects\\imza-bilgileri\\key.properties")
+// Keystore configuration (Supports Vault path, relative path, and legacy path)
+val possibleKeyFiles = listOf(
+    rootProject.projectDir.parentFile.parentFile.resolve("imza-bilgileri/key.properties"),
+    file("C:\\Users\\Kerem\\Projects\\imza-bilgileri\\key.properties")
+)
+val keystorePropertiesFile = possibleKeyFiles.firstOrNull { it.exists() } ?: file("C:\\Users\\Kerem\\Projects\\imza-bilgileri\\key.properties")
 val keystoreProperties = Properties()
 var hasValidKeystore = false
 
@@ -43,9 +48,9 @@ android {
     signingConfigs {
         if (hasValidKeystore) {
             create("release") {
-                val storeFilePath = keystoreProperties.getProperty("storeFile")
-                // file() automatically handles absolute paths correctly
-                storeFile = file(storeFilePath)
+                val configuredStore = keystoreProperties.getProperty("storeFile")
+                val storeF = file(configuredStore)
+                storeFile = if (storeF.exists()) storeF else file(keystorePropertiesFile.parentFile, "ksk.jks")
                 storePassword = keystoreProperties.getProperty("storePassword")
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")

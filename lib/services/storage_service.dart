@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/game_models.dart';
+import 'cloud_service.dart';
 
 class StorageService {
   static const String _gamesKey = 'saved_games';
@@ -35,11 +36,13 @@ class StorageService {
     );
   }
 
-  /// Aktif oyunu kaydet (auto-save)
+  /// Aktif oyunu kaydet (auto-save) + buluta arka planda sync
   static Future<void> saveActiveGame(Game game) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_activeGameKey, jsonEncode(game.toJson()));
     await saveGame(game);
+    // Arka planda cloud sync (hata olsa yerel kayit etkilenmez)
+    CloudService.syncGame(game).catchError((_) {});
   }
 
   /// Aktif oyunu getir
@@ -71,6 +74,8 @@ class StorageService {
     if (activeGame != null && activeGame.id == gameId) {
       await clearActiveGame();
     }
+    // Buluttan da sil
+    CloudService.deleteGame(gameId).catchError((_) {});
   }
 
   /// Bir oyuncunun tüm maçlardaki istatistiklerini getir

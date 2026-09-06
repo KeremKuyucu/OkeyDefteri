@@ -33,7 +33,7 @@ class LoggingService {
             'uid': uid,
             'timestamp': DateTime.now().toIso8601String(),
             'app': 'okey_defteri',
-            'event': 'app_opened_daily',
+            'event': 'app_opened',
             'platform': kIsWeb ? 'web' : 'mobile',
           }),
         );

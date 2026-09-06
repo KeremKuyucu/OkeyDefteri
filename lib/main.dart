@@ -2,17 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'services/logging_service.dart';
 import 'services/localization_service.dart';
 import 'services/settings_service.dart';
+import 'env.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (!kIsWeb) {
     await MobileAds.instance.initialize();
   }
+  await Supabase.initialize(
+    url: Env.supabaseUrl,
+    publishableKey: Env.supabaseAnonKey,
+  );
   await SettingsService.init();
   await LoggingService.init();
   await Localization.init();

@@ -26,10 +26,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late Game _game;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
-  
+
   InterstitialAd? _interstitialAd;
   bool _isInterstitialAdLoaded = false;
-  
+
   String get _interstitialAdUnitId {
     if (kDebugMode) {
       return defaultTargetPlatform == TargetPlatform.android
@@ -99,12 +99,21 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     return false;
   }
 
+  /// Bu oyuncunun mevcut turda zaten bitirme veya kalan taş puanı var mı?
+  bool _playerHasTurnEndingScoreInCurrentRound(Player player) {
+    return player.scores.any(
+      (s) =>
+          s.roundNumber == _game.currentRound &&
+          (s.type.isFinishType || s.type == ScoreType.eldeKalanTaslar),
+    );
+  }
+
   /// Toplu tur sonu dialogu — masaya tıklayınca açılır
   Future<void> _openBulkRoundEndDialog() async {
     if (_game.isFinished) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(Localization.t('game.finished'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(Localization.t('game.finished'))));
       return;
     }
 
@@ -114,15 +123,24 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         context: context,
         builder: (context) => AlertDialog(
           backgroundColor: AppTheme.surfaceDark,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: AppTheme.accentGold, size: 24),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: AppTheme.accentGold,
+                size: 24,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   Localization.t('game.forgot_round_title'),
-                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
+                  style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ],
@@ -161,47 +179,73 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => _BulkRoundEndDialog(
-        game: _game,
-      ),
+      builder: (ctx) => _BulkRoundEndDialog(game: _game),
     );
 
     if (!mounted || result == null) return;
 
-    final winnerId = result['winnerId'] as String;
-    final finishType = result['finishType'] as ScoreType;
+    final noWinner = result['noWinner'] == true;
+    final winnerId = result['winnerId'] as String?;
+    final finishType = result['finishType'] as ScoreType?;
     final scores = result['scores'] as Map<String, int>;
 
     final now = DateTime.now();
     setState(() {
-      for (final player in _game.allPlayers) {
-        if (player.id == winnerId) {
-          // Bitiren oyuncuya bitirme puanı
-          player.scores.add(ScoreEntry(
-            id: '${now.millisecondsSinceEpoch}_${player.id}_finish',
-            type: finishType,
-            points: finishType.defaultPoints,
-            isCiftli: player.isCiftliGidiyor,
-            timestamp: now,
-            roundNumber: _game.currentRound,
-          ));
-        } else {
-          // Diğer oyunculara elde kalan taş puanı
+      if (noWinner || winnerId == null) {
+        // Kimse bitmedi
+        for (final player in _game.allPlayers) {
           final pts = scores[player.id] ?? 0;
           if (pts > 0) {
-            final isOkeyFinish = finishType == ScoreType.okeyAtarakBitti ||
-                finishType == ScoreType.okeyAtarakEldenBitti;
-            final isEldenFinish = finishType == ScoreType.eldenBitti ||
-                finishType == ScoreType.okeyAtarakEldenBitti;
-            player.scores.add(ScoreEntry(
-              id: '${now.millisecondsSinceEpoch}_${player.id}_remaining',
-              type: ScoreType.eldeKalanTaslar,
-              points: pts,
-              isCiftli: player.isCiftliGidiyor,
-              isOkeyFinish: isOkeyFinish || isEldenFinish,
-              timestamp: now,
-              roundNumber: _game.currentRound,
-            ));
+            player.scores.add(
+              ScoreEntry(
+                id: '${now.millisecondsSinceEpoch}_${player.id}_remaining',
+                type: ScoreType.eldeKalanTaslar,
+                points: pts,
+                isCiftli: player.isCiftliGidiyor,
+                isOkeyFinish: false,
+                timestamp: now,
+                roundNumber: _game.currentRound,
+              ),
+            );
+          }
+        }
+      } else {
+        // Kazanan var
+        for (final player in _game.allPlayers) {
+          if (player.id == winnerId) {
+            // Bitiren oyuncuya bitirme puanı
+            player.scores.add(
+              ScoreEntry(
+                id: '${now.millisecondsSinceEpoch}_${player.id}_finish',
+                type: finishType!,
+                points: finishType.defaultPoints,
+                isCiftli: player.isCiftliGidiyor,
+                timestamp: now,
+                roundNumber: _game.currentRound,
+              ),
+            );
+          } else {
+            // Diğer oyunculara elde kalan taş puanı
+            final pts = scores[player.id] ?? 0;
+            if (pts > 0) {
+              final isOkeyFinish =
+                  finishType == ScoreType.okeyAtarakBitti ||
+                  finishType == ScoreType.okeyAtarakEldenBitti;
+              final isEldenFinish =
+                  finishType == ScoreType.eldenBitti ||
+                  finishType == ScoreType.okeyAtarakEldenBitti;
+              player.scores.add(
+                ScoreEntry(
+                  id: '${now.millisecondsSinceEpoch}_${player.id}_remaining',
+                  type: ScoreType.eldeKalanTaslar,
+                  points: pts,
+                  isCiftli: player.isCiftliGidiyor,
+                  isOkeyFinish: isOkeyFinish || isEldenFinish,
+                  timestamp: now,
+                  roundNumber: _game.currentRound,
+                ),
+              );
+            }
           }
         }
       }
@@ -209,18 +253,36 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     await _saveGame();
 
     if (!mounted) return;
-    final winner = _game.allPlayers.firstWhere((p) => p.id == winnerId);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${winner.name} ${finishType.emoji} ${finishType.label}',
-          style: const TextStyle(fontWeight: FontWeight.w600),
+    if (noWinner || winnerId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            Localization.t('game.no_winner_saved'),
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: AppTheme.warningOrange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
-        backgroundColor: AppTheme.lightGreen,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+      );
+    } else {
+      final winner = _game.allPlayers.firstWhere((p) => p.id == winnerId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${winner.name} ${finishType!.emoji} ${finishType.label}',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: AppTheme.lightGreen,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _openScoreDialog(Player player) async {
@@ -231,21 +293,30 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       return;
     }
 
-    // Turu geçmeyi unuttun mu kontrolü
-    if (_hasTurnEndingScoreInCurrentRound()) {
+    // Bu oyuncu için turu geçmeyi unuttun mu kontrolü
+    if (_playerHasTurnEndingScoreInCurrentRound(player)) {
       final shouldContinue = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           backgroundColor: AppTheme.surfaceDark,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: AppTheme.accentGold, size: 24),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: AppTheme.accentGold,
+                size: 24,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   Localization.t('game.forgot_round_title'),
-                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
+                  style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ],
@@ -312,9 +383,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.surfaceDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Son Puanı Geri Al',
-          style: TextStyle(color: AppTheme.textPrimary),
+        title: Text(
+          Localization.t('game.undo_score_title'),
+          style: const TextStyle(color: AppTheme.textPrimary),
         ),
         content: Text(
           Localization.t(
@@ -326,9 +397,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'İptal',
-              style: TextStyle(color: AppTheme.textSecondary),
+            child: Text(
+              Localization.t('common.cancel'),
+              style: const TextStyle(color: AppTheme.textSecondary),
             ),
           ),
           ElevatedButton(
@@ -342,7 +413,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.dangerRed,
             ),
-            child: const Text('Geri Al'),
+            child: Text(
+              Localization.t('common.undo'),
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -384,7 +458,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     if (_game.isFinished) return;
     AudioVibrationService.playClickSound();
     AudioVibrationService.vibrateHeavy();
-    
+
     if (_isInterstitialAdLoaded && _interstitialAd != null) {
       _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
         onAdDismissedFullScreenContent: (ad) {
@@ -929,15 +1003,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 class _BulkRoundEndDialog extends StatefulWidget {
   final Game game;
 
-  const _BulkRoundEndDialog({
-    required this.game,
-  });
+  const _BulkRoundEndDialog({required this.game});
 
   @override
   State<_BulkRoundEndDialog> createState() => _BulkRoundEndDialogState();
 }
 
 class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
+  bool _noWinner = false;
   String? _winnerId;
   ScoreType _finishType = ScoreType.normalBitti;
   final Map<String, TextEditingController> _controllers = {};
@@ -973,14 +1046,19 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
   }
 
   bool _isTeammateOfWinner(Player p) {
-    if (_winnerId == null) return false;
+    if (_noWinner || _winnerId == null) return false;
     if (_winnerId == p.id) return false;
-    final winner = widget.game.allPlayers.firstWhere((pl) => pl.id == _winnerId);
+    final winner = widget.game.allPlayers.firstWhere(
+      (pl) => pl.id == _winnerId,
+    );
     final winnerTeam = widget.game.getTeamForPlayer(winner);
     return winnerTeam.player1.id == p.id || winnerTeam.player2.id == p.id;
   }
 
   bool get _canSave {
+    if (_noWinner) {
+      return true;
+    }
     if (_winnerId == null) return false;
     for (final p in widget.game.allPlayers) {
       if (p.id == _winnerId) continue;
@@ -993,11 +1071,15 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final activeColor = _noWinner
+        ? AppTheme.warningOrange
+        : (_finishColors[_finishType] ?? AppTheme.successGreen);
+
     return Dialog(
       backgroundColor: AppTheme.surfaceDark,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: 620),
+        constraints: const BoxConstraints(maxHeight: 650),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -1025,89 +1107,202 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
-              // Bitirme Türü Seçimi
-              const Text(
-                'Nasıl Bitti?',
-                style: TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+              // Biri Bitirdi / Kimse Bitmedi Seçim Tab'i
+              Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceCard,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.lightGreen.withValues(alpha: 0.15),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: _finishTypes.map((type) {
-                  final selected = _finishType == type;
-                  final color = _finishColors[type] ?? AppTheme.successGreen;
-                  return GestureDetector(
-                    onTap: () => setState(() => _finishType = type),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? color.withValues(alpha: 0.25)
-                            : AppTheme.surfaceCard,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: selected
-                              ? color
-                              : AppTheme.lightGreen.withValues(alpha: 0.2),
-                          width: selected ? 2 : 1,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _noWinner = false),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            gradient: !_noWinner ? AppTheme.goldGradient : null,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('🏆', style: TextStyle(fontSize: 14)),
+                              const SizedBox(width: 6),
+                              Text(
+                                Localization.t('game.round_winner_mode'),
+                                style: TextStyle(
+                                  color: !_noWinner ? Colors.black : AppTheme.textMuted,
+                                  fontWeight: !_noWinner ? FontWeight.w800 : FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            type.emoji,
-                            style: const TextStyle(fontSize: 18),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() {
+                          _noWinner = true;
+                          _winnerId = null;
+                        }),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _noWinner
+                                ? AppTheme.warningOrange.withValues(alpha: 0.25)
+                                : null,
+                            borderRadius: BorderRadius.circular(10),
+                            border: _noWinner
+                                ? Border.all(
+                                    color: AppTheme.warningOrange.withValues(alpha: 0.6),
+                                  )
+                                : null,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            type.label,
-                            style: TextStyle(
-                              color: selected ? color : AppTheme.textMuted,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('🛑', style: TextStyle(fontSize: 14)),
+                              const SizedBox(width: 6),
+                              Text(
+                                Localization.t('game.round_no_winner_mode'),
+                                style: TextStyle(
+                                  color: _noWinner ? AppTheme.warningOrange : AppTheme.textMuted,
+                                  fontWeight: _noWinner ? FontWeight.w800 : FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            '${type.defaultPoints}',
-                            style: TextStyle(
-                              color: selected
-                                  ? color.withValues(alpha: 0.8)
-                                  : AppTheme.textMuted,
-                              fontSize: 9,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  );
-                }).toList(),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
 
-              // Kazanan Seçimi
-              const Text(
-                'Kim Bitirdi?',
-                style: TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+              if (!_noWinner) ...[
+                // Bitirme Türü Seçimi
+                Text(
+                  Localization.t('game.how_finished'),
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: _finishTypes.map((type) {
+                    final selected = _finishType == type;
+                    final color = _finishColors[type] ?? AppTheme.successGreen;
+                    return GestureDetector(
+                      onTap: () => setState(() => _finishType = type),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? color.withValues(alpha: 0.25)
+                              : AppTheme.surfaceCard,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: selected
+                                ? color
+                                : AppTheme.lightGreen.withValues(alpha: 0.2),
+                            width: selected ? 2 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              type.emoji,
+                              style: const TextStyle(fontSize: 18),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              type.label,
+                              style: TextStyle(
+                                color: selected ? color : AppTheme.textMuted,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              '${type.defaultPoints}',
+                              style: TextStyle(
+                                color: selected
+                                    ? color.withValues(alpha: 0.8)
+                                    : AppTheme.textMuted,
+                                fontSize: 9,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+
+                // Kazanan Seçimi
+                Text(
+                  Localization.t('game.who_finished'),
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ] else ...[
+                // Kimse Bitmedi Bilgilendirmesi
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warningOrange.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppTheme.warningOrange.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: AppTheme.warningOrange, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          Localization.t('game.no_winner_desc'),
+                          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // Oyuncular Listesi
               ...widget.game.allPlayers.map((p) {
-                final isWinner = _winnerId == p.id;
-                final color = _finishColors[_finishType] ?? AppTheme.successGreen;
+                final isWinner = !_noWinner && _winnerId == p.id;
+                final isTeammate = !_noWinner && _isTeammateOfWinner(p);
+                final color = _noWinner
+                    ? AppTheme.warningOrange
+                    : (_finishColors[_finishType] ?? AppTheme.successGreen);
+
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Material(
@@ -1117,10 +1312,12 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                     borderRadius: BorderRadius.circular(12),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
-                      onTap: () => setState(() => _winnerId = p.id),
+                      onTap: !_noWinner
+                          ? () => setState(() => _winnerId = p.id)
+                          : null,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
+                          horizontal: 12,
                           vertical: 10,
                         ),
                         child: Row(
@@ -1129,16 +1326,17 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                               width: 32,
                               height: 32,
                               decoration: BoxDecoration(
-                                gradient: isWinner
-                                    ? AppTheme.goldGradient
-                                    : null,
+                                gradient: isWinner ? AppTheme.goldGradient : null,
                                 color: isWinner ? null : AppTheme.surfaceCardLight,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Center(
                                 child: isWinner
-                                    ? const Icon(Icons.emoji_events,
-                                        color: Colors.black, size: 18)
+                                    ? const Icon(
+                                        Icons.emoji_events,
+                                        color: Colors.black,
+                                        size: 18,
+                                      )
                                     : Text(
                                         p.name.isNotEmpty
                                             ? p.name[0].toUpperCase()
@@ -1158,9 +1356,7 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                                     child: Text(
                                       p.name,
                                       style: TextStyle(
-                                        color: isWinner
-                                            ? color
-                                            : AppTheme.textPrimary,
+                                        color: isWinner ? color : AppTheme.textPrimary,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -1201,7 +1397,7 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                                 ),
                               ),
                             if (!isWinner)
-                              if (_isTeammateOfWinner(p))
+                              if (isTeammate)
                                 const SizedBox(
                                   width: 70,
                                   child: Text(
@@ -1214,7 +1410,40 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                                     ),
                                   ),
                                 )
-                              else
+                              else ...[
+                                // Hızlı 202 (Açamadı) butonu
+                                if (_noWinner)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 6),
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _controllers[p.id]?.text = '202';
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.dangerRed.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(
+                                            color: AppTheme.dangerRed.withValues(alpha: 0.3),
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          '202',
+                                          style: TextStyle(
+                                            color: AppTheme.dangerRed,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 SizedBox(
                                   width: 70,
                                   child: TextField(
@@ -1246,6 +1475,7 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                                     onChanged: (_) => setState(() {}),
                                   ),
                                 ),
+                              ],
                           ],
                         ),
                       ),
@@ -1261,30 +1491,45 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                 child: ElevatedButton.icon(
                   onPressed: _canSave
                       ? () {
-                          final scores = <String, int>{};
-                          for (final p in widget.game.allPlayers) {
-                            if (p.id == _winnerId) continue;
-                            if (_isTeammateOfWinner(p)) {
-                              scores[p.id] = 0;
-                            } else {
+                          if (_noWinner) {
+                            final scores = <String, int>{};
+                            for (final p in widget.game.allPlayers) {
                               scores[p.id] =
                                   int.tryParse(_controllers[p.id]?.text ?? '') ?? 0;
                             }
+                            Navigator.pop(context, {
+                              'noWinner': true,
+                              'scores': scores,
+                            });
+                          } else {
+                            final scores = <String, int>{};
+                            for (final p in widget.game.allPlayers) {
+                              if (p.id == _winnerId) continue;
+                              if (_isTeammateOfWinner(p)) {
+                                scores[p.id] = 0;
+                              } else {
+                                scores[p.id] =
+                                    int.tryParse(_controllers[p.id]?.text ?? '') ?? 0;
+                              }
+                            }
+                            Navigator.pop(context, {
+                              'noWinner': false,
+                              'winnerId': _winnerId,
+                              'finishType': _finishType,
+                              'scores': scores,
+                            });
                           }
-                          Navigator.pop(context, {
-                            'winnerId': _winnerId,
-                            'finishType': _finishType,
-                            'scores': scores,
-                          });
                         }
                       : null,
                   icon: const Icon(Icons.check_circle_outline),
                   label: Text(
-                    Localization.t('common.save'),
+                    _noWinner
+                        ? Localization.t('common.save')
+                        : Localization.t('common.save'),
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _finishColors[_finishType],
+                    backgroundColor: activeColor,
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: AppTheme.surfaceCard,
                     padding: const EdgeInsets.symmetric(vertical: 14),

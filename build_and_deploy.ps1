@@ -35,7 +35,8 @@ try {
     $projectRoot = $PSScriptRoot
     Set-Location $projectRoot
 
-    $distPath = "C:\Users\Kerem\Projects\Outputs"
+    $projectsParent = Split-Path -Parent $projectRoot
+    $distPath = if (Test-Path (Join-Path $projectsParent "Outputs")) { Join-Path $projectsParent "Outputs" } else { "C:\Users\Kerem\Projects\Outputs" }
 
     # Vercel CLI
     $vercelCmd = "vercel"

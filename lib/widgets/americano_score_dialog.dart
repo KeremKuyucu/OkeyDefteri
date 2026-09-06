@@ -23,6 +23,7 @@ class AmericanoRoundScoreDialog extends StatefulWidget {
 
 class _AmericanoRoundScoreDialogState
     extends State<AmericanoRoundScoreDialog> {
+  bool _noWinner = false;
   String? _winnerId;
   final Map<String, TextEditingController> _cardControllers = {};
   final Map<String, bool> _islekFlags = {};
@@ -30,6 +31,7 @@ class _AmericanoRoundScoreDialogState
   final Map<String, bool> _takimYokOkeyAldiFlags = {};
   final Map<String, bool> _okeyAttiFlags = {};
   final Map<String, bool> _yanlisElActiFlags = {};
+  final Map<String, bool> _islekAtarakBittiFlags = {};
 
   @override
   void initState() {
@@ -41,6 +43,7 @@ class _AmericanoRoundScoreDialogState
       _takimYokOkeyAldiFlags[p.id] = false;
       _okeyAttiFlags[p.id] = false;
       _yanlisElActiFlags[p.id] = false;
+      _islekAtarakBittiFlags[p.id] = false;
     }
   }
 
@@ -59,7 +62,7 @@ class _AmericanoRoundScoreDialogState
     for (final p in widget.players) {
       final entries = <ScoreEntry>[];
 
-      if (p.id == _winnerId) {
+      if (!_noWinner && p.id == _winnerId) {
         entries.add(ScoreEntry(
           id: '${now.millisecondsSinceEpoch}_${p.id}_win',
           type: ScoreType.americanoKazandi,
@@ -125,6 +128,15 @@ class _AmericanoRoundScoreDialogState
           roundNumber: widget.roundNumber,
         ));
       }
+      if (_islekAtarakBittiFlags[p.id] == true) {
+        entries.add(ScoreEntry(
+          id: '${now.millisecondsSinceEpoch}_${p.id}_islek_atarak',
+          type: ScoreType.americanoIslekAtarakBitti,
+          points: 100,
+          timestamp: now,
+          roundNumber: widget.roundNumber,
+        ));
+      }
 
       results.add(MapEntry(p.id, entries));
     }
@@ -132,6 +144,7 @@ class _AmericanoRoundScoreDialogState
   }
 
   bool get _canSave {
+    if (_noWinner) return true;
     if (_winnerId == null) return false;
     for (final p in widget.players) {
       if (p.id == _winnerId) continue;
@@ -193,70 +206,152 @@ class _AmericanoRoundScoreDialogState
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-                // Kazananı seç
-                Text(
-                  Localization.t('americano.who_finished'),
-                  style: const TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
+                // Biri Bitirdi / Kimse Bitmedi Seçim Tab'i
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceCard,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.lightGreen.withValues(alpha: 0.15),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: widget.players.map((p) {
-                    final isSelected = _winnerId == p.id;
-                    return GestureDetector(
-                      onTap: () => setState(() {
-                        _winnerId = p.id;
-                        _cardControllers[p.id]?.clear();
-                      }),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          gradient: isSelected ? AppTheme.goldGradient : null,
-                          color: isSelected ? null : AppTheme.surfaceCardLight,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isSelected
-                                ? AppTheme.accentGold
-                                : AppTheme.textMuted.withValues(alpha: 0.3),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _noWinner = false),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              gradient: !_noWinner ? AppTheme.goldGradient : null,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text('🏆', style: TextStyle(fontSize: 14)),
+                                const SizedBox(width: 6),
+                                Text(
+                                  Localization.t('game.round_winner_mode'),
+                                  style: TextStyle(
+                                    color: !_noWinner ? Colors.black : AppTheme.textMuted,
+                                    fontWeight: !_noWinner ? FontWeight.w800 : FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (isSelected)
-                              const Padding(
-                                padding: EdgeInsets.only(right: 4),
-                                child: Text('🏆',
-                                    style: TextStyle(fontSize: 14)),
-                              ),
-                            Text(
-                              p.name,
-                              style: TextStyle(
-                                color: isSelected
-                                    ? Colors.black
-                                    : AppTheme.textPrimary,
-                                fontWeight: isSelected
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                                fontSize: 13,
-                              ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() {
+                            _noWinner = true;
+                            _winnerId = null;
+                          }),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: _noWinner
+                                  ? AppTheme.warningOrange.withValues(alpha: 0.25)
+                                  : null,
+                              borderRadius: BorderRadius.circular(10),
+                              border: _noWinner
+                                  ? Border.all(
+                                      color: AppTheme.warningOrange.withValues(alpha: 0.6),
+                                    )
+                                  : null,
                             ),
-                          ],
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text('🛑', style: TextStyle(fontSize: 14)),
+                                const SizedBox(width: 6),
+                                Text(
+                                  Localization.t('game.round_no_winner_mode'),
+                                  style: TextStyle(
+                                    color: _noWinner ? AppTheme.warningOrange : AppTheme.textMuted,
+                                    fontWeight: _noWinner ? FontWeight.w800 : FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    );
-                  }).toList(),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+
+                if (!_noWinner) ...[
+                  // Kazananı seç
+                  Text(
+                    Localization.t('americano.who_finished'),
+                    style: const TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: widget.players.map((p) {
+                      final isSelected = _winnerId == p.id;
+                      return GestureDetector(
+                        onTap: () => setState(() {
+                          _winnerId = p.id;
+                          _cardControllers[p.id]?.clear();
+                        }),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            gradient: isSelected ? AppTheme.goldGradient : null,
+                            color: isSelected ? null : AppTheme.surfaceCardLight,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppTheme.accentGold
+                                  : AppTheme.textMuted.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (isSelected)
+                                const Padding(
+                                  padding: EdgeInsets.only(right: 4),
+                                  child: Text('🏆',
+                                      style: TextStyle(fontSize: 14)),
+                                ),
+                              Text(
+                                p.name,
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.black
+                                      : AppTheme.textPrimary,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                ],
 
                 const Divider(color: AppTheme.surfaceCardLight),
                 const SizedBox(height: 12),
@@ -313,7 +408,7 @@ class _AmericanoRoundScoreDialogState
   }
 
   Widget _buildPlayerRow(Player player) {
-    final isWinner = _winnerId == player.id;
+    final isWinner = !_noWinner && _winnerId == player.id;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -437,6 +532,14 @@ class _AmericanoRoundScoreDialogState
                   onTap: () => setState(() =>
                       _yanlisElActiFlags[player.id] =
                           !(_yanlisElActiFlags[player.id] ?? false)),
+                ),
+                _penaltyChip(
+                  label: Localization.t('americano.islek_atarak_bitti'),
+                  emoji: '🎯🏁',
+                  isSelected: _islekAtarakBittiFlags[player.id] ?? false,
+                  onTap: () => setState(() =>
+                      _islekAtarakBittiFlags[player.id] =
+                          !(_islekAtarakBittiFlags[player.id] ?? false)),
                 ),
               ],
             ),

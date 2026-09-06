@@ -40,6 +40,23 @@
     "keep_enabled": "Keep Enabled",
     "telemetry_message": "This data can never be linked to you. Its only purpose is to learn the daily usage count of the app.\n\nExample ping sent:\n{\n  \"uid\": \"123e4567-e89b-12d3...\",\n  \"timestamp\": \"2026-05-25T14:30:00\",\n  \"app\": \"okey_defteri\",\n  \"event\": \"app_opened_daily\",\n  \"platform\": \"mobile\" // or \"web\"\n}"
   },
+  "cloud": {
+    "title": "Cloud Backup",
+    "desc": "Back up your games and restore them when switching devices.",
+    "active": "Cloud backup active ✅",
+    "restore": "Restore Backup",
+    "restore_subtitle": "Download cloud games to device",
+    "push_all": "Upload All",
+    "push_all_subtitle": "Send all local games to cloud",
+    "sign_out": "Sign Out",
+    "sign_in_google": "Sign In with Google",
+    "restore_success": "{0} games restored!",
+    "up_to_date": "Backup is up to date, no new games found.",
+    "push_success": "{0} games uploaded to cloud.",
+    "sign_in_error": "Sign in failed: {0}",
+    "cancelled": "Sign in cancelled.",
+    "failed": "Sign in failed."
+  },
   "about": {
     "title": "About",
     "app_name": "Okey Defteri",
@@ -86,7 +103,15 @@
     "prev_round_undo": "Undo",
     "forgot_round_title": "Did You Forget to Advance the Round?",
     "forgot_round_message": "It looks like penalties or a finish score were already entered for this round. Did you forget to advance the round? Are you sure you want to continue?",
-    "forgot_round_continue": "Yes, Continue"
+    "forgot_round_continue": "Yes, Continue",
+    "undo_score_title": "Undo Last Score",
+    "round_winner_mode": "Winner",
+    "round_no_winner_mode": "Nobody Finished (Tiles Out)",
+    "who_finished": "Who Finished?",
+    "how_finished": "How Finished?",
+    "no_winner_desc": "Tiles ran out, nobody could finish. Everyone enters their remaining tile points.",
+    "no_winner_saved": "Nobody finished — Remaining tile scores saved.",
+    "points_with_win": "+1 🏆 Win"
   },
   "new_game": {
     "title": "New Game",
@@ -104,7 +129,14 @@
     "player_3_bottom": "Player 3 (Bottom)",
     "player_4_left": "Player 4 (Left)",
     "start_game": "START GAME",
-    "team_name": "Team Name"
+    "team_name": "Team Name",
+    "americano_mode": "Americano Mode",
+    "mode_team": "Team",
+    "mode_team_desc": "2 teams • Individual scores",
+    "mode_solo": "Solo",
+    "mode_solo_desc": "4 individual • No teams",
+    "desc_americano": "12 rounds • Individual",
+    "desc_101": "Classic • Team"
   },
   "past_games": {
     "title": "Past Games",
@@ -162,7 +194,8 @@
     "americano_kazandi": "Won the Round",
     "americano_takim_yok_okey_aldi": "Took Okey Without a Team",
     "americano_okey_atti": "Discarded Okey",
-    "americano_yanlis_el_acti": "Wrong Hand Open"
+    "americano_yanlis_el_acti": "Wrong Hand Open",
+    "americano_islek_atarak_bitti": "Finish with Misplay"
   },
   "nicknames": {
     "early_yanlis_el": "🤦♂️ First round and already a fucking idiot, why did you even come?",
@@ -230,6 +263,7 @@
     "takim_yok_okey_aldi": "Took Okey (+50)",
     "okey_atti": "Discarded Okey (+50)",
     "yanlis_el_acti": "Wrong Hand Open (+50)",
+    "islek_atarak_bitti": "Finish with Misplay (+100)",
     "penalty_for": "Penalty for {0}:",
     "save_round": "Save Round",
     "round_end": "Round Over!",

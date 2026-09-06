@@ -557,9 +557,10 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
             // Americano tur kural banneri
             if (round != null) _buildRoundBanner(round),
             const SizedBox(height: 6),
-            // Takım toplam skorları (bireysel da görülebilsin diye kaldı)
-            TeamScoreBar(team1: _game.team1, team2: _game.team2),
-            const SizedBox(height: 6),
+            // Takım toplam skorları — solo modda gizlenir
+            if (!_game.isAmericanoSolo)
+              TeamScoreBar(team1: _game.team1, team2: _game.team2),
+            if (!_game.isAmericanoSolo) const SizedBox(height: 6),
             Expanded(child: _buildGameTable()),
             const AdBannerWidget(),
             _buildBottomBar(),

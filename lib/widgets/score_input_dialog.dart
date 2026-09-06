@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/game_models.dart';
 import '../theme/app_theme.dart';
+import '../services/localization_service.dart';
 
 class CalculatorDialog extends StatefulWidget {
   final String title;
@@ -825,12 +826,12 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
                 ),
 
               // BİTİRME bölümü
-              _buildSectionDivider('BİTİRME'),
+              _buildSectionDivider('BİTİRME (🏆 GALİBİYET)'),
               const SizedBox(height: 8),
               _buildScoreButton(
                 ScoreType.normalBitti,
                 color: AppTheme.successGreen,
-                icon: Icons.check_circle_rounded,
+                icon: Icons.emoji_events_rounded,
               ),
               const SizedBox(height: 8),
               _buildScoreButton(
@@ -993,6 +994,7 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
     bool isManual = false,
   }) {
     final isNegative = type.defaultPoints < 0;
+    final isFinish = type.isFinishType;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1029,17 +1031,46 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '${type.emoji} ${type.label}',
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            '${type.emoji} ${type.label}',
+                            style: TextStyle(
+                              color: color,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        if (isFinish) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: AppTheme.goldGradient,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              '🏆 +1',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     if (!isManual)
                       Text(
-                        '${isNegative ? "" : "+"}${type.defaultPoints} puan',
+                        isFinish
+                            ? '${isNegative ? "" : "+"}${type.defaultPoints} puan • ${Localization.t('game.points_with_win')}'
+                            : '${isNegative ? "" : "+"}${type.defaultPoints} puan',
                         style: TextStyle(
                           color: color.withValues(alpha: 0.7),
                           fontSize: 12,

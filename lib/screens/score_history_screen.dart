@@ -24,12 +24,21 @@ class _ScoreHistoryScreenState extends State<ScoreHistoryScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.surfaceDark,
-        title: Text(Localization.t('history.deleteScore'), style: TextStyle(color: AppTheme.textPrimary)),
-        content: Text(Localization.t('history.deleteScoreConfirm'), style: TextStyle(color: AppTheme.textSecondary)),
+        title: Text(
+          Localization.t('history.deleteScore'),
+          style: TextStyle(color: AppTheme.textPrimary),
+        ),
+        content: Text(
+          Localization.t('history.deleteScoreConfirm'),
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(Localization.t('common.cancel'), style: TextStyle(color: AppTheme.textSecondary)),
+            child: Text(
+              Localization.t('common.cancel'),
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -41,7 +50,10 @@ class _ScoreHistoryScreenState extends State<ScoreHistoryScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.dangerRed,
             ),
-            child: Text(Localization.t('common.delete'), style: TextStyle(color: Colors.white)),
+            child: Text(
+              Localization.t('common.delete'),
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -101,7 +113,7 @@ class _ScoreHistoryScreenState extends State<ScoreHistoryScreen> {
                     color: AppTheme.textMuted.withValues(alpha: 0.3),
                   ),
                   const SizedBox(height: 16),
-                   Text(
+                  Text(
                     Localization.t('history.no_scores'),
                     style: TextStyle(color: AppTheme.textMuted, fontSize: 16),
                   ),
@@ -162,7 +174,10 @@ class _ScoreHistoryScreenState extends State<ScoreHistoryScreen> {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
-                              Localization.t('history.round', args: [round.toString()]),
+                              Localization.t(
+                                'history.round',
+                                args: [round.toString()],
+                              ),
                               style: const TextStyle(
                                 color: Colors.black,
                                 fontSize: 13,
@@ -328,7 +343,7 @@ class _ScoreHistoryScreenState extends State<ScoreHistoryScreen> {
                         return Padding(
                           padding: const EdgeInsets.only(top: 2),
                           child: Text(
-                            '${Localization.t('history.round_caused_by')}: ${causedBy.name}',
+                            '${Localization.t('history.round_caused_by')} ${causedBy.name}',
                             style: const TextStyle(
                               color: AppTheme.warningOrange,
                               fontSize: 11,
