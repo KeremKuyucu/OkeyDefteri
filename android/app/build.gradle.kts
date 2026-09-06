@@ -50,7 +50,7 @@ android {
             create("release") {
                 val configuredStore = keystoreProperties.getProperty("storeFile")
                 val storeF = file(configuredStore)
-                storeFile = if (storeF.exists()) storeF else file(keystorePropertiesFile.parentFile, "ksk.jks")
+                storeFile = if (storeF.exists()) storeF else keystorePropertiesFile.parentFile.resolve("ksk.jks")
                 storePassword = keystoreProperties.getProperty("storePassword")
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")
