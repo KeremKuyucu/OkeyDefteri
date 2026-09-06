@@ -1,7 +1,7 @@
 #requires -version 5.1
 <#
 .SYNOPSIS
-    Okey Defteri - Otomatik Build ve Dagit (Web / APK)
+    Okey Defteri - Otomatik Build ve Dagit (Web / APK / AAB)
 .DESCRIPTION
     Flutter projesini secilen platformlar icin derler, web build'i Vercel CLI ile deploy eder ve opsiyonel GitHub Release yapar.
 .NOTES
@@ -181,6 +181,7 @@ try {
         $platforms = @(
             [pscustomobject]@{ Name = "Web"; Command = @("flutter", "build", "web", "--release"); Selected = $true }
             [pscustomobject]@{ Name = "APK"; Command = @("flutter", "build", "apk", "--release", "--split-per-abi"); Selected = $true }
+            [pscustomobject]@{ Name = "AAB"; Command = @("flutter", "build", "appbundle", "--release"); Selected = $true }
         )
 
         $currentIndex = 0
@@ -264,7 +265,7 @@ try {
         }
     }
 
-    # -- 4) APK Kopyalama ----------------------------------------------------------
+    # -- 4) APK & AAB Kopyalama ----------------------------------------------------
     if ($selectedNames -contains "APK") {
         Write-Step "APK Dosyalari Kopyalaniyor"
 
@@ -273,7 +274,7 @@ try {
             throw "Kaynak APK yolu bulunamadi: $flutterApkPath"
         }
 
-        $apkFiles = Get-ChildItem -Path $flutterApkPath -Filter "*.apk" -Recurse
+        $apkFiles = @(Get-ChildItem -Path $flutterApkPath -Filter "*.apk" -Recurse)
         if ($apkFiles.Count -eq 0) {
             Write-Warn "APK dosyasi bulunamadi: $flutterApkPath"
         }
@@ -283,6 +284,27 @@ try {
             Copy-Item -Path $apk.FullName -Destination $destFile -Force
             $sizeMB = "{0:N2} MB" -f ($apk.Length / 1MB)
             Write-Info "Kopyalandi: $($apk.Name) ($sizeMB)"
+        }
+    }
+
+    if ($selectedNames -contains "AAB") {
+        Write-Step "AAB (App Bundle) Dosyasi Kopyalaniyor"
+
+        $flutterAabPath = Join-Path $projectRoot "build\app\outputs\bundle\release"
+        if (-not (Test-Path $flutterAabPath)) {
+            throw "Kaynak AAB yolu bulunamadi: $flutterAabPath"
+        }
+
+        $aabFiles = @(Get-ChildItem -Path $flutterAabPath -Filter "*.aab" -Recurse)
+        if ($aabFiles.Count -eq 0) {
+            Write-Warn "AAB dosyasi bulunamadi: $flutterAabPath"
+        }
+
+        foreach ($aab in $aabFiles) {
+            $destFile = Join-Path $distPath $aab.Name
+            Copy-Item -Path $aab.FullName -Destination $destFile -Force
+            $sizeMB = "{0:N2} MB" -f ($aab.Length / 1MB)
+            Write-Info "Kopyalandi: $($aab.Name) ($sizeMB)"
         }
     }
 
@@ -433,7 +455,7 @@ try {
             Write-Host "+-------------------------------------------------------+" -ForegroundColor Green
             Write-Host "|  Cikti Dosyalari ($distPath)" -ForegroundColor Green
             foreach ($f in $distFiles) {
-                if ($f.Name -like "*.apk") {
+                if ($f.Name -like "*.apk" -or $f.Name -like "*.aab") {
                     $sizeMB = "{0:N2} MB" -f ($f.Length / 1MB)
                     $fLine  = "|    {0,-32} {1,10}" -f $f.Name, $sizeMB
                     Write-Host $fLine -ForegroundColor White
