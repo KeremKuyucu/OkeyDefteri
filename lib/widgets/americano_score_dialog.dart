@@ -7,14 +7,18 @@ import '../services/localization_service.dart';
 /// Americano tur sonu puan giriş dialogu.
 /// Kazanan seçilir, diğer oyuncular için kart değerleri ve cezalar girilir.
 class AmericanoRoundScoreDialog extends StatefulWidget {
-  final List<Player> players;
+  final Game game;
   final int roundNumber;
+  final List<Player>? players;
 
   const AmericanoRoundScoreDialog({
     super.key,
-    required this.players,
+    required this.game,
     required this.roundNumber,
+    this.players,
   });
+
+  List<Player> get allPlayers => players ?? game.allPlayers;
 
   @override
   State<AmericanoRoundScoreDialog> createState() =>
@@ -25,6 +29,7 @@ class _AmericanoRoundScoreDialogState
     extends State<AmericanoRoundScoreDialog> {
   bool _noWinner = false;
   String? _winnerId;
+  bool _isOkeyFinish = false;
   final Map<String, TextEditingController> _cardControllers = {};
   final Map<String, bool> _islekFlags = {};
   final Map<String, bool> _hileFlags = {};
@@ -36,7 +41,8 @@ class _AmericanoRoundScoreDialogState
   @override
   void initState() {
     super.initState();
-    for (final p in widget.players) {
+    _isOkeyFinish = false;
+    for (final p in widget.allPlayers) {
       _cardControllers[p.id] = TextEditingController();
       _islekFlags[p.id] = false;
       _hileFlags[p.id] = false;
@@ -45,6 +51,17 @@ class _AmericanoRoundScoreDialogState
       _yanlisElActiFlags[p.id] = false;
       _islekAtarakBittiFlags[p.id] = false;
     }
+  }
+
+  bool _isTeammateOfWinner(Player p) {
+    if (widget.game.isAmericanoSolo) return false;
+    if (_noWinner || _winnerId == null) return false;
+    if (_winnerId == p.id) return false;
+    final winner = widget.allPlayers.firstWhere(
+      (pl) => pl.id == _winnerId,
+    );
+    final winnerTeam = widget.game.getTeamForPlayer(winner);
+    return winnerTeam.player1.id == p.id || winnerTeam.player2.id == p.id;
   }
 
   @override
@@ -59,17 +76,21 @@ class _AmericanoRoundScoreDialogState
     final now = DateTime.now();
     final results = <MapEntry<String, List<ScoreEntry>>>[];
 
-    for (final p in widget.players) {
+    for (final p in widget.allPlayers) {
       final entries = <ScoreEntry>[];
 
       if (!_noWinner && p.id == _winnerId) {
         entries.add(ScoreEntry(
           id: '${now.millisecondsSinceEpoch}_${p.id}_win',
-          type: ScoreType.americanoKazandi,
-          points: -50,
+          type: _isOkeyFinish
+              ? ScoreType.americanoOkeyAtarakBitti
+              : ScoreType.americanoKazandi,
+          points: _isOkeyFinish ? -100 : -50,
           timestamp: now,
           roundNumber: widget.roundNumber,
         ));
+      } else if (!_noWinner && _isTeammateOfWinner(p)) {
+        // Eşli oyunlarda takım arkadaşına elde kalan kart cezası yazılmaz (otomatik 0 puan).
       } else {
         final raw = int.tryParse(_cardControllers[p.id]?.text ?? '') ?? 0;
         if (raw > 0) {
@@ -146,8 +167,9 @@ class _AmericanoRoundScoreDialogState
   bool get _canSave {
     if (_noWinner) return true;
     if (_winnerId == null) return false;
-    for (final p in widget.players) {
+    for (final p in widget.allPlayers) {
       if (p.id == _winnerId) continue;
+      if (_isTeammateOfWinner(p)) continue;
       final text = _cardControllers[p.id]?.text ?? '';
       if (text.isEmpty) return false;
     }
@@ -302,12 +324,17 @@ class _AmericanoRoundScoreDialogState
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: widget.players.map((p) {
+                    children: widget.allPlayers.map((p) {
                       final isSelected = _winnerId == p.id;
                       return GestureDetector(
                         onTap: () => setState(() {
                           _winnerId = p.id;
                           _cardControllers[p.id]?.clear();
+                          for (final pl in widget.allPlayers) {
+                            if (_isTeammateOfWinner(pl)) {
+                              _cardControllers[pl.id]?.clear();
+                            }
+                          }
                         }),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
@@ -350,6 +377,102 @@ class _AmericanoRoundScoreDialogState
                       );
                     }).toList(),
                   ),
+                  if (_winnerId != null) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _isOkeyFinish = false),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              decoration: BoxDecoration(
+                                gradient: !_isOkeyFinish
+                                    ? AppTheme.goldGradient
+                                    : null,
+                                color: !_isOkeyFinish
+                                    ? null
+                                    : AppTheme.surfaceCardLight,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: !_isOkeyFinish
+                                      ? AppTheme.accentGold
+                                      : AppTheme.textMuted.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text('🏆', style: TextStyle(fontSize: 13)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    Localization.t('americano.finish_normal'),
+                                    style: TextStyle(
+                                      color: !_isOkeyFinish
+                                          ? Colors.black
+                                          : AppTheme.textMuted,
+                                      fontSize: 12,
+                                      fontWeight: !_isOkeyFinish
+                                          ? FontWeight.w800
+                                          : FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _isOkeyFinish = true),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              decoration: BoxDecoration(
+                                gradient: _isOkeyFinish
+                                    ? const LinearGradient(
+                                        colors: [Color(0xFF9C27B0), Color(0xFF673AB7)],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      )
+                                    : null,
+                                color: _isOkeyFinish
+                                    ? null
+                                    : AppTheme.surfaceCardLight,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: _isOkeyFinish
+                                      ? const Color(0xFFBA68C8)
+                                      : AppTheme.textMuted.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text('🃏', style: TextStyle(fontSize: 13)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    Localization.t('americano.finish_okey'),
+                                    style: TextStyle(
+                                      color: _isOkeyFinish
+                                          ? Colors.white
+                                          : AppTheme.textMuted,
+                                      fontSize: 12,
+                                      fontWeight: _isOkeyFinish
+                                          ? FontWeight.w800
+                                          : FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 20),
                 ],
 
@@ -371,7 +494,7 @@ class _AmericanoRoundScoreDialogState
                 ),
                 const SizedBox(height: 12),
 
-                ...widget.players.map((p) => _buildPlayerRow(p)),
+                ...widget.allPlayers.map((p) => _buildPlayerRow(p)),
                 const SizedBox(height: 20),
 
                 SizedBox(
@@ -409,6 +532,7 @@ class _AmericanoRoundScoreDialogState
 
   Widget _buildPlayerRow(Player player) {
     final isWinner = !_noWinner && _winnerId == player.id;
+    final isTeammate = _isTeammateOfWinner(player);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -417,12 +541,16 @@ class _AmericanoRoundScoreDialogState
         decoration: BoxDecoration(
           color: isWinner
               ? AppTheme.accentGold.withValues(alpha: 0.08)
-              : AppTheme.surfaceCard,
+              : isTeammate
+                  ? AppTheme.lightGreen.withValues(alpha: 0.06)
+                  : AppTheme.surfaceCard,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isWinner
                 ? AppTheme.accentGold.withValues(alpha: 0.3)
-                : AppTheme.surfaceCardLight,
+                : isTeammate
+                    ? AppTheme.lightGreen.withValues(alpha: 0.25)
+                    : AppTheme.surfaceCardLight,
           ),
         ),
         child: Column(
@@ -431,19 +559,77 @@ class _AmericanoRoundScoreDialogState
             Row(
               children: [
                 Text(
-                  isWinner ? '🏆 ' : '🃏 ',
+                  isWinner
+                      ? (_isOkeyFinish ? '🃏🏆 ' : '🏆 ')
+                      : isTeammate
+                          ? '🤝 '
+                          : '🃏 ',
                   style: const TextStyle(fontSize: 16),
                 ),
                 Expanded(
-                  child: Text(
-                    player.name,
-                    style: TextStyle(
-                      color: isWinner
-                          ? AppTheme.accentGold
-                          : AppTheme.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          player.name,
+                          style: TextStyle(
+                            color: isWinner
+                                ? AppTheme.accentGold
+                                : isTeammate
+                                    ? AppTheme.lightGreen
+                                    : AppTheme.textPrimary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isWinner) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _isOkeyFinish
+                                ? const Color(0xFF7E57C2).withValues(alpha: 0.2)
+                                : AppTheme.accentGold.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            _isOkeyFinish ? '-100 puan' : '-50 puan',
+                            style: TextStyle(
+                              color: _isOkeyFinish
+                                  ? const Color(0xFFB39DDB)
+                                  : AppTheme.accentGold,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (isTeammate) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.lightGreen.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: AppTheme.lightGreen.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Text(
+                            Localization.t('americano.teammate_badge'),
+                            style: const TextStyle(
+                              color: AppTheme.lightGreen,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 Text(
@@ -457,7 +643,52 @@ class _AmericanoRoundScoreDialogState
                 ),
               ],
             ),
-            if (!isWinner) ...[
+            if (isTeammate) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppTheme.lightGreen.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppTheme.lightGreen.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Text('🤝', style: TextStyle(fontSize: 14)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        Localization.t('americano.teammate_no_penalty'),
+                        style: const TextStyle(
+                          color: AppTheme.lightGreen,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppTheme.lightGreen.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        '0 puan',
+                        style: TextStyle(
+                          color: AppTheme.lightGreen,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (!isWinner) ...[
               const SizedBox(height: 8),
               TextField(
                 controller: _cardControllers[player.id],

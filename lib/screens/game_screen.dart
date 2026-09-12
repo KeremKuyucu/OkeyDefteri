@@ -1390,6 +1390,30 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                                       ),
                                     ),
                                   ],
+                                  if (isTeammate) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.lightGreen.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: AppTheme.lightGreen.withValues(alpha: 0.3),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        Localization.t('game.teammate_badge'),
+                                        style: const TextStyle(
+                                          color: AppTheme.lightGreen,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
@@ -1403,15 +1427,24 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                               ),
                             if (!isWinner)
                               if (isTeammate)
-                                const SizedBox(
+                                Container(
                                   width: 70,
-                                  child: Text(
-                                    '-',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: AppTheme.textMuted,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w700,
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.lightGreen.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: AppTheme.lightGreen.withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  child: const Center(
+                                    child: Text(
+                                      '0',
+                                      style: TextStyle(
+                                        color: AppTheme.lightGreen,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
                                   ),
                                 )

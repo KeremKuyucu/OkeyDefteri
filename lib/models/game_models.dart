@@ -1,4 +1,5 @@
 import 'package:okey_defteri/services/settings_service.dart';
+import 'dart:math';
 import '../services/localization_service.dart';
 
 /// Oyun modu
@@ -26,8 +27,8 @@ enum ScoreType {
   americanoOkeyAtti, // Okey atma cezası +50 (Americano)
   americanoYanlisElActi, // Yanlış el açma cezası +50 (Americano)
   americanoIslekAtarakBitti, // İşlek atarak bitti +100 puan ceza (Americano)
+  americanoOkeyAtarakBitti, // Okey atarak bitti -100 puan (Americano)
 }
-
 
 extension ScoreTypeExtension on ScoreType {
   String get label {
@@ -70,6 +71,8 @@ extension ScoreTypeExtension on ScoreType {
         return Localization.t('score_types.americano_yanlis_el_acti');
       case ScoreType.americanoIslekAtarakBitti:
         return Localization.t('score_types.americano_islek_atarak_bitti');
+      case ScoreType.americanoOkeyAtarakBitti:
+        return Localization.t('score_types.americano_okey_atarak_bitti');
     }
   }
 
@@ -113,6 +116,8 @@ extension ScoreTypeExtension on ScoreType {
         return '❌';
       case ScoreType.americanoIslekAtarakBitti:
         return '🎯🏁';
+      case ScoreType.americanoOkeyAtarakBitti:
+        return '🃏🏆';
     }
   }
 
@@ -156,6 +161,8 @@ extension ScoreTypeExtension on ScoreType {
         return 50;
       case ScoreType.americanoIslekAtarakBitti:
         return 100;
+      case ScoreType.americanoOkeyAtarakBitti:
+        return -100;
     }
   }
 
@@ -184,7 +191,8 @@ extension ScoreTypeExtension on ScoreType {
         this == ScoreType.americanoTakimYokOkeyAldi ||
         this == ScoreType.americanoOkeyAtti ||
         this == ScoreType.americanoYanlisElActi ||
-        this == ScoreType.americanoIslekAtarakBitti;
+        this == ScoreType.americanoIslekAtarakBitti ||
+        this == ScoreType.americanoOkeyAtarakBitti;
   }
 
   /// Bu tür bir bitirme türü mü?
@@ -194,7 +202,8 @@ extension ScoreTypeExtension on ScoreType {
         this == ScoreType.okeyAtarakBitti ||
         this == ScoreType.okeyAtarakEldenBitti ||
         this == ScoreType.americanoKazandi ||
-        this == ScoreType.americanoIslekAtarakBitti;
+        this == ScoreType.americanoIslekAtarakBitti ||
+        this == ScoreType.americanoOkeyAtarakBitti;
   }
 
   /// Bu ceza türü için "kim yaptı?" sorusu sorulacak mı?
@@ -300,9 +309,8 @@ class Player {
     required this.name,
     required this.seatIndex,
     List<ScoreEntry>? scores,
-    bool isCiftliGidiyor = false,
-  }) : _isCiftliGidiyor = isCiftliGidiyor,
-       scores = scores ?? [];
+    this._isCiftliGidiyor = false,
+  }) : scores = scores ?? [];
 
   int get totalScore =>
       scores.fold(0, (sum, entry) => sum + entry.effectivePoints);
@@ -320,150 +328,445 @@ class Player {
     return breakdown;
   }
 
-  /// Oyuncunun mevcut oyun istatistiklerine göre dinamik lakap üretir
   String getNickname(List<Player> allPlayers, int roundNumber) {
     if (!SettingsService.getToxicNicknamesEnabled()) return '';
+    if (allPlayers.isEmpty) return '';
 
     final scores = this.scores;
     final totalScore = this.totalScore;
 
-    int okeyBitti = scores
-        .where((s) => s.type == ScoreType.okeyAtarakBitti)
-        .length;
-    int okeyEldenBitti = scores
-        .where((s) => s.type == ScoreType.okeyAtarakEldenBitti)
-        .length;
-    int eldenBitti = scores.where((s) => s.type == ScoreType.eldenBitti).length;
-    int normalBitti = scores
-        .where((s) => s.type == ScoreType.normalBitti)
-        .length;
-    int americanoKazandi = scores
-        .where((s) => s.type == ScoreType.americanoKazandi)
-        .length;
-    int toplamBitirme = okeyBitti + okeyEldenBitti + eldenBitti + normalBitti + americanoKazandi;
-
-    int islekAtti = scores.where((s) => s.type == ScoreType.islekAtti).length;
-    int okeyAtti = scores.where((s) => s.type == ScoreType.okeyAtti).length;
-    int yanlisEl = scores.where((s) => s.type == ScoreType.yanlisElActi).length;
-    int acamadi = scores.where((s) => s.type == ScoreType.acamadi).length;
-
-    int okeyiniAldilar = scores
-        .where((s) => s.type == ScoreType.okeyiniAldilar)
-        .length;
-    int toplamCeza = islekAtti + okeyAtti + yanlisEl + acamadi + okeyiniAldilar;
-
-    int penaltiesCaused = 0;
-    int penaltiesReceived = scores
-        .where((s) => s.causedByPlayerId != null && s.causedByPlayerId != id)
-        .length;
-
-    for (final p in allPlayers) {
-      if (p.id == id) continue;
-      penaltiesCaused += p.scores.where((s) => s.causedByPlayerId == id).length;
-    }
+    // ============================================================
+    // 1. SIRALAMA
+    // ============================================================
 
     final sorted = List<Player>.from(allPlayers)
       ..sort((a, b) => a.totalScore.compareTo(b.totalScore));
-    final myRank = sorted.indexWhere((p) => p.id == id);
-    final isLeader = myRank == 0;
-    final isLast = myRank == sorted.length - 1;
-    final isSecondLast = myRank == sorted.length - 2;
 
-    final scoreDiff = totalScore - sorted.first.totalScore;
-    final diffFromLast = sorted.last.totalScore - totalScore;
+    final myRank = sorted.indexWhere((p) => p.id == id);
+
+    if (myRank < 0) return '';
+
+    final isLeader = myRank == 0;
+    final isSecond = myRank == 1;
+    final isThird = myRank == 2;
+    final isLast = myRank == sorted.length - 1;
+
+    final leaderScore = sorted.first.totalScore;
+
+    final leaderDiff = totalScore - leaderScore;
+
+    final runnerUpDiff = sorted.length > 1
+        ? sorted[1].totalScore - leaderScore
+        : 0;
+
+    // ============================================================
+    // 2. BİTİRME İSTATİSTİKLERİ
+    // ============================================================
+
+    final okeyBitti = scores
+        .where((s) => s.type == ScoreType.okeyAtarakBitti)
+        .length;
+
+    final okeyEldenBitti = scores
+        .where((s) => s.type == ScoreType.okeyAtarakEldenBitti)
+        .length;
+
+    final eldenBitti = scores
+        .where((s) => s.type == ScoreType.eldenBitti)
+        .length;
+
+    final normalBitti = scores
+        .where((s) => s.type == ScoreType.normalBitti)
+        .length;
+
+    final americanoKazandi = scores
+        .where(
+          (s) =>
+              s.type == ScoreType.americanoKazandi ||
+              s.type == ScoreType.americanoOkeyAtarakBitti,
+        )
+        .length;
+
+    final totalWins =
+        okeyBitti +
+        okeyEldenBitti +
+        eldenBitti +
+        normalBitti +
+        americanoKazandi;
+
+    // ============================================================
+    // 3. HATA / CEZA İSTATİSTİKLERİ
+    // ============================================================
+
+    final islekAtti = scores.where((s) => s.type == ScoreType.islekAtti).length;
+
+    final okeyAtti = scores.where((s) => s.type == ScoreType.okeyAtti).length;
+
+    final yanlisEl = scores
+        .where((s) => s.type == ScoreType.yanlisElActi)
+        .length;
+
+    final acamadi = scores.where((s) => s.type == ScoreType.acamadi).length;
+
+    final okeyiniAldilar = scores
+        .where((s) => s.type == ScoreType.okeyiniAldilar)
+        .length;
+
+    final totalMistakes =
+        islekAtti + okeyAtti + yanlisEl + acamadi + okeyiniAldilar;
+
+    // ============================================================
+    // 4. RAKİBE VERDİĞİ CEZALAR
+    // ============================================================
+
+    int penaltiesCaused = 0;
+
+    for (final player in allPlayers) {
+      if (player.id == id) continue;
+
+      penaltiesCaused += player.scores
+          .where((s) => s.causedByPlayerId == id)
+          .length;
+    }
+
+    // ============================================================
+    // 5. SON TURLAR
+    // ============================================================
+
+    final lastEntry = scores.isNotEmpty ? scores.last : null;
+
+    final justFinished = lastEntry != null && lastEntry.type.isFinishType;
+
+    final justAcamadi =
+        lastEntry != null && lastEntry.type == ScoreType.acamadi;
+
+    final justBigPenalty = lastEntry != null && lastEntry.effectivePoints > 100;
 
     final recentScores = scores.length >= 3
         ? scores.sublist(scores.length - 3)
         : scores;
-    final isOnFire =
-        recentScores.where((s) => s.effectivePoints < 0).length >= 3;
-    final isSinking =
-        recentScores.where((s) => s.effectivePoints > 0).length >= 3;
+
+    final recentFinishes = recentScores
+        .where((s) => s.type.isFinishType)
+        .length;
+
+    final isOnFire = recentFinishes >= 2;
+
+    final isComeback =
+        (isLeader || isSecond) && recentFinishes >= 2 && roundNumber >= 4;
 
     // ============================================================
-    // ERKEN OYUN
+    // 6. ADAYLAR
+    //
+    // category -> ağırlık
+    //
+    // Büyük ağırlık = bu durum nickname'i daha çok hak ediyor.
     // ============================================================
-    if (roundNumber <= 3) {
-      if (yanlisEl >= 2) return Localization.t('nicknames.early_yanlis_el');
-      if (okeyAtti >= 1) return Localization.t('nicknames.early_okey_atti');
-      if (islekAtti >= 1) return Localization.t('nicknames.early_islek_atti');
-      if (okeyiniAldilar >= 1)
-        return Localization.t('nicknames.early_okeyini_aldilar');
 
-      if (okeyEldenBitti >= 1)
-        return Localization.t('nicknames.early_okey_elden_bitti');
-      if (okeyBitti >= 1) return Localization.t('nicknames.early_okey_bitti');
-      if (penaltiesCaused >= 1)
-        return Localization.t('nicknames.early_penalties_caused');
+    final Map<String, double> candidates = {};
 
-      if (isLeader) return Localization.t('nicknames.early_leader');
-      if (isLast) return Localization.t('nicknames.early_last');
-      return Localization.t('nicknames.early_default');
+    void addCandidate(String category, double weight) {
+      if (weight <= 0) return;
+
+      candidates[category] = (candidates[category] ?? 0) + weight;
     }
 
     // ============================================================
-    // ORTA OYUN
+    // 7. ERKEN OYUN
     // ============================================================
-    if (roundNumber <= 7) {
-      if (yanlisEl >= 3) return Localization.t('nicknames.mid_yanlis_el');
-      if (acamadi >= 4) return Localization.t('nicknames.mid_acamadi');
-      if ((islekAtti + okeyAtti) >= 4)
-        return Localization.t('nicknames.mid_tas_dagitma');
 
-      if (isLast && scoreDiff > 250)
-        return Localization.t('nicknames.mid_last_far');
-      if (okeyEldenBitti >= 1)
-        return Localization.t('nicknames.mid_okey_elden_bitti');
-      if (penaltiesCaused >= 4)
-        return Localization.t('nicknames.mid_penalties_caused');
-      if (penaltiesReceived >= 3)
-        return Localization.t('nicknames.mid_penalties_received');
-      if (isOnFire) return Localization.t('nicknames.mid_on_fire');
-      if (isLeader) return Localization.t('nicknames.mid_leader');
-
-      return Localization.t('nicknames.mid_default');
+    if (roundNumber <= 1 && scores.isEmpty) {
+      addCandidate('early_start', 100);
     }
 
     // ============================================================
-    // GEÇ OYUN (En sert kısım)
+    // 8. SON EL / MOMENTUM
+    //
+    // Bunlar önemli ama kalıcı karakteristiklerden biraz daha düşük.
     // ============================================================
 
-    // Felaketler
-    if (yanlisEl >= 4) return Localization.t('nicknames.late_yanlis_el');
-    if (acamadi >= 5) return Localization.t('nicknames.late_acamadi');
-    if (okeyiniAldilar >= 3)
-      return Localization.t('nicknames.late_okeyini_aldilar');
+    if (justFinished) {
+      addCandidate('recent_winner', 45);
+    }
 
-    // İyi olanlar (zorba + erotik)
-    if (penaltiesCaused >= 6)
-      return Localization.t('nicknames.late_penalties_caused');
-    if (okeyEldenBitti >= 2)
-      return Localization.t('nicknames.late_okey_elden_bitti');
-    if (okeyBitti >= 4) return Localization.t('nicknames.late_okey_bitti');
-    if (eldenBitti >= 3) return Localization.t('nicknames.late_elden_bitti');
+    if (isOnFire) {
+      addCandidate('on_fire', 60 + ((recentFinishes - 2) * 15));
+    }
 
-    if (isOnFire && isLeader)
-      return Localization.t('nicknames.late_on_fire_leader');
+    if (isComeback) {
+      addCandidate('comeback_king', 75);
+    }
 
-    final double winLossRatio = (roundNumber - toplamBitirme) > 0
-        ? (toplamBitirme / (roundNumber - toplamBitirme))
-        : toplamBitirme.toDouble();
-    if (winLossRatio >= 3.0 && isLeader)
-      return Localization.t('nicknames.late_win_ratio_leader');
+    // ============================================================
+    // 9. ÇİFTLİ
+    // ============================================================
 
-    // Puan durumu
-    if (isLast && totalScore > 700)
-      return Localization.t('nicknames.late_last_very_far');
-    if (isLast) return Localization.t('nicknames.late_last');
+    if (isCiftliGidiyor) {
+      addCandidate('ciftli_gambler', 70);
+    }
 
-    if (isLeader && totalScore < -500)
-      return Localization.t('nicknames.late_leader_very_far');
-    if (isLeader) return Localization.t('nicknames.late_leader');
+    // ============================================================
+    // 10. OKEY İLE İLGİLİ DURUMLAR
+    //
+    // Bunlar özellikle güçlü.
+    // Çünkü "okey master" veya "okey victim" oyuncunun
+    // gerçekten yaptığı bir olaya dayanıyor.
+    // ============================================================
 
-    if (totalScore > 500) return Localization.t('nicknames.late_score_500');
-    if (totalScore > 300) return Localization.t('nicknames.late_score_300');
+    if (okeyEldenBitti > 0) {
+      addCandidate('okey_master', 100 + (okeyEldenBitti * 25));
+    }
 
-    return Localization.t('nicknames.late_default');
+    if (okeyBitti > 0) {
+      addCandidate('okey_master', 90 + (okeyBitti * 20));
+    }
+
+    if (penaltiesCaused > 0) {
+      addCandidate('okey_master', 75 + (penaltiesCaused * 10));
+    }
+
+    if (okeyAtti > 0) {
+      addCandidate('okey_victim', 80 + (okeyAtti * 20));
+    }
+
+    if (okeyiniAldilar > 0) {
+      addCandidate('okey_victim', 90 + (okeyiniAldilar * 20));
+    }
+
+    // ============================================================
+    // 11. EL AÇAMAMA
+    // ============================================================
+
+    if (justAcamadi) {
+      addCandidate('cant_open', 95);
+    }
+
+    if (acamadi >= 2) {
+      addCandidate('cant_open', 80 + ((acamadi - 2) * 20));
+    }
+
+    // ============================================================
+    // 12. HATA / CEZA MAKİNESİ
+    // ============================================================
+
+    if (totalMistakes >= 2) {
+      addCandidate('penalty_prone', 55 + (totalMistakes * 8));
+    }
+
+    if (yanlisEl >= 2) {
+      addCandidate('penalty_prone', 70 + ((yanlisEl - 2) * 15));
+    }
+
+    // ============================================================
+    // 13. TEMİZ OYUNCU
+    // ============================================================
+
+    if (totalMistakes == 0 && totalScore <= 60 && roundNumber >= 3) {
+      addCandidate('clean_player', 65);
+    }
+
+    // ============================================================
+    // 14. PUAN KRİZİ
+    // ============================================================
+
+    if (totalScore >= 350) {
+      addCandidate('score_crisis', 75 + ((totalScore - 350) / 20));
+    }
+
+    if (justBigPenalty) {
+      addCandidate('score_crisis', 85);
+    }
+
+    // ============================================================
+    // 15. EŞ DİNAMİKLERİ
+    // ============================================================
+
+    if (allPlayers.length == 4) {
+      final partnerSeat = (seatIndex + 2) % 4;
+
+      final partner = allPlayers.firstWhere(
+        (p) => p.seatIndex == partnerSeat,
+        orElse: () => allPlayers.first,
+      );
+
+      if (partner.id != id) {
+        if (totalScore < partner.totalScore - 120 &&
+            totalWins >= partner.winCount) {
+          addCandidate('team_carry', 85);
+        }
+
+        if (totalScore > partner.totalScore + 120 &&
+            totalMistakes > partner.penaltyCount) {
+          addCandidate('team_burden', 90);
+        }
+      }
+    }
+
+    // ============================================================
+    // 16. SIRALAMA
+    //
+    // EN ÖNEMLİ DEĞİŞİKLİK:
+    //
+    // Sonunculuk artık "her durumda" güçlü bir aday değil.
+    // Özel olay varsa onların gerisinde kalıyor.
+    // ============================================================
+
+    if (isLeader) {
+      if (runnerUpDiff >= 100) {
+        addCandidate('leader_dominant', 65);
+      } else {
+        addCandidate('leader_close', 45);
+      }
+    }
+
+    if (isSecond) {
+      if (leaderDiff <= 60) {
+        addCandidate('stalker_second', 55);
+      } else {
+        addCandidate('middle_silent', 20);
+      }
+    }
+
+    if (isThird) {
+      addCandidate('middle_struggle', 35);
+      addCandidate('middle_silent', 20);
+    }
+
+    if (isLast) {
+      // Gerçekten ezici şekilde sonuncuysa güçlü.
+      if (leaderDiff >= 300 || totalScore >= 500) {
+        addCandidate('last_hopeless', 60);
+      }
+      // Yakın ara sonuncuysa çok daha zayıf.
+      else {
+        addCandidate('last_fighting', 30);
+      }
+    }
+
+    // ============================================================
+    // 17. TAMAMEN BOŞ DURUM
+    //
+    // Burada bile sürekli "götü boklu" dönmemesi için
+    // sıralamaya göre makul ama düşük ağırlıklı aday veriyoruz.
+    // ============================================================
+
+    if (candidates.isEmpty) {
+      if (isLeader) {
+        addCandidate('leader_close', 30);
+      } else if (isSecond) {
+        addCandidate('stalker_second', 30);
+      } else if (isLast) {
+        addCandidate('last_fighting', 25);
+      } else {
+        addCandidate('middle_silent', 25);
+        addCandidate('middle_struggle', 20);
+      }
+    }
+
+    // ============================================================
+    // 18. ÇOK ZAYIF ADAYLARI TEMİZLE
+    //
+    // Örneğin:
+    //
+    // okey_master  = 120
+    // last_hopeless = 60
+    // middle_silent = 20
+    //
+    // Burada middle_silent tamamen gereksiz.
+    //
+    // En güçlü adayın %35'inden düşük olanları atıyoruz.
+    // ============================================================
+
+    final maxWeight = candidates.values.reduce((a, b) => a > b ? a : b);
+
+    final minimumUsefulWeight = maxWeight * 0.35;
+
+    candidates.removeWhere((_, weight) => weight < minimumUsefulWeight);
+
+    // ============================================================
+    // 19. DETERMİNİSTİK AĞIRLIKLI SEÇİM
+    //
+    // Random kullanıyoruz ama seed sabit.
+    //
+    // Dolayısıyla:
+    // - build() -> nickname değişmez
+    // - aynı tur -> nickname değişmez
+    // - sonraki tur -> farklı seçim yapılabilir
+    // ============================================================
+
+    var seed =
+        id.hashCode ^
+        (roundNumber * 7919) ^
+        (scores.length * 104729) ^
+        (totalScore * 31);
+
+    // Negatif / taşma ihtimaline karşı normalize ediyoruz.
+    seed &= 0x7fffffff;
+
+    final random = Random(seed);
+
+    final totalWeight = candidates.values.fold<double>(
+      0,
+      (sum, weight) => sum + weight,
+    );
+
+    var roll = random.nextDouble() * totalWeight;
+
+    String chosenCategory = candidates.keys.first;
+
+    for (final entry in candidates.entries) {
+      roll -= entry.value;
+
+      if (roll <= 0) {
+        chosenCategory = entry.key;
+        break;
+      }
+    }
+
+    // ============================================================
+    // 20. VARYANT SEÇİMİ
+    // ============================================================
+
+    const variantCounts = <String, int>{
+      'early_start': 4,
+
+      'leader_dominant': 4,
+      'leader_close': 4,
+
+      'stalker_second': 4,
+
+      'middle_silent': 4,
+      'middle_struggle': 3,
+
+      'last_hopeless': 4,
+      'last_fighting': 3,
+
+      'on_fire': 3,
+      'recent_winner': 3,
+      'comeback_king': 3,
+
+      'cant_open': 3,
+      'penalty_prone': 3,
+
+      'okey_master': 3,
+      'okey_victim': 3,
+
+      'ciftli_gambler': 3,
+
+      'score_crisis': 3,
+      'clean_player': 3,
+
+      'team_carry': 2,
+      'team_burden': 2,
+    };
+
+    final variantCount = variantCounts[chosenCategory] ?? 1;
+
+    final variantSeed = seed ^ (chosenCategory.hashCode * 37);
+
+    final variantIndex = (variantSeed.abs() % variantCount) + 1;
+
+    return Localization.t('nicknames.${chosenCategory}_$variantIndex');
   }
 
   Map<String, dynamic> toJson() => {

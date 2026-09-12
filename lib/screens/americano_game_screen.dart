@@ -216,7 +216,7 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AmericanoRoundScoreDialog(
-        players: _game.allPlayers,
+        game: _game,
         roundNumber: _game.currentRound,
       ),
     );
@@ -235,19 +235,27 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
 
     // Kazananı göster
     final winnerEntry = results.firstWhere(
-      (e) => e.value.any((s) => s.type == ScoreType.americanoKazandi),
+      (e) => e.value.any((s) =>
+          s.type == ScoreType.americanoKazandi ||
+          s.type == ScoreType.americanoOkeyAtarakBitti),
       orElse: () => MapEntry('', []),
     );
     if (winnerEntry.key.isNotEmpty && mounted) {
       final winner =
           _game.allPlayers.firstWhere((p) => p.id == winnerEntry.key);
+      final isOkey = winnerEntry.value
+          .any((s) => s.type == ScoreType.americanoOkeyAtarakBitti);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            Localization.t('americano.round_winner', args: [winner.name]),
+            isOkey
+                ? Localization.t('americano.round_winner_okey',
+                    args: [winner.name])
+                : Localization.t('americano.round_winner', args: [winner.name]),
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
-          backgroundColor: AppTheme.accentGold,
+          backgroundColor:
+              isOkey ? const Color(0xFF7E57C2) : AppTheme.accentGold,
           behavior: SnackBarBehavior.floating,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -774,7 +782,10 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
                       player: _game.team1.player1,
                       team: _game.team1,
                       position: 0,
-                      nickname: '',
+                      nickname: _game.team1.player1.getNickname(
+                        _game.allPlayers,
+                        _game.currentRound,
+                      ),
                       onTap: () => _openPenaltyDialog(_game.team1.player1),
                       onToggleCiftli: () {},
                     ),
@@ -793,7 +804,10 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
                           player: _game.team2.player2,
                           team: _game.team2,
                           position: 3,
-                          nickname: '',
+                          nickname: _game.team2.player2.getNickname(
+                            _game.allPlayers,
+                            _game.currentRound,
+                          ),
                           onTap: () =>
                               _openPenaltyDialog(_game.team2.player2),
                           onToggleCiftli: () {},
@@ -858,7 +872,10 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
                           player: _game.team2.player1,
                           team: _game.team2,
                           position: 1,
-                          nickname: '',
+                          nickname: _game.team2.player1.getNickname(
+                            _game.allPlayers,
+                            _game.currentRound,
+                          ),
                           onTap: () =>
                               _openPenaltyDialog(_game.team2.player1),
                           onToggleCiftli: () {},
@@ -875,7 +892,10 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
                       player: _game.team1.player2,
                       team: _game.team1,
                       position: 2,
-                      nickname: '',
+                      nickname: _game.team1.player2.getNickname(
+                        _game.allPlayers,
+                        _game.currentRound,
+                      ),
                       onTap: () => _openPenaltyDialog(_game.team1.player2),
                       onToggleCiftli: () {},
                     ),

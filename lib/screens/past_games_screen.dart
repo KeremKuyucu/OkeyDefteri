@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/game_models.dart';
 import '../theme/app_theme.dart';
 import '../services/storage_service.dart';
+import '../services/auth_service.dart';
 import 'game_screen.dart';
 import 'americano_game_screen.dart';
 import '../services/localization_service.dart';
@@ -32,38 +33,90 @@ class _PastGamesScreenState extends State<PastGamesScreen> {
   }
 
   Future<void> _deleteGame(Game game) async {
-    final confirm = await showDialog<bool>(
+    final isSignedIn = AuthService.isSignedIn;
+
+    if (!isSignedIn) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: AppTheme.surfaceDark,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            Localization.t('past_games.delete_game'),
+            style: const TextStyle(color: AppTheme.textPrimary),
+          ),
+          content: Text(
+            Localization.t('past_games.delete_game_confirm'),
+            style: const TextStyle(color: AppTheme.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(Localization.t('common.cancel'),
+                  style: const TextStyle(color: AppTheme.textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.dangerRed,
+              ),
+              child: Text(Localization.t('common.delete')),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        await StorageService.deleteGame(game.id, deleteFromCloud: false);
+        _loadGames();
+      }
+      return;
+    }
+
+    // Oturum açıksa kullanıcıya bulut ve yerel seçeneklerini sor
+    final choice = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.surfaceDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           Localization.t('past_games.delete_game'),
-          style: TextStyle(color: AppTheme.textPrimary),
+          style: const TextStyle(color: AppTheme.textPrimary),
         ),
         content: Text(
-          Localization.t('past_games.delete_game_confirm'),
-          style: TextStyle(color: AppTheme.textSecondary),
+          Localization.t('past_games.delete_cloud_confirm'),
+          style: const TextStyle(color: AppTheme.textSecondary),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child:  Text(Localization.t('common.cancel'),
-                style: TextStyle(color: AppTheme.textSecondary)),
+            onPressed: () => Navigator.pop(context, null),
+            child: Text(Localization.t('common.cancel'),
+                style: const TextStyle(color: AppTheme.textSecondary)),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context, 'device_only'),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AppTheme.textMuted),
+            ),
+            child: Text(Localization.t('past_games.delete_from_device_only'),
+                style: const TextStyle(color: AppTheme.textPrimary)),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(context, 'everywhere'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.dangerRed,
             ),
-            child:  Text(Localization.t('common.delete')),
+            child: Text(Localization.t('past_games.delete_everywhere')),
           ),
         ],
       ),
     );
 
-    if (confirm == true) {
-      await StorageService.deleteGame(game.id);
+    if (choice == 'device_only') {
+      await StorageService.deleteGame(game.id, deleteFromCloud: false);
+      _loadGames();
+    } else if (choice == 'everywhere') {
+      await StorageService.deleteGame(game.id, deleteFromCloud: true);
       _loadGames();
     }
   }

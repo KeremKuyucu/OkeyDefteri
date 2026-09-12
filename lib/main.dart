@@ -5,7 +5,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
-import 'services/logging_service.dart';
+import 'services/telemetry_service.dart';
 import 'services/localization_service.dart';
 import 'services/settings_service.dart';
 import 'env.dart';
@@ -20,7 +20,7 @@ void main() async {
     publishableKey: Env.supabaseAnonKey,
   );
   await SettingsService.init();
-  await LoggingService.init();
+  await TelemetryService.init();
   await Localization.init();
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,

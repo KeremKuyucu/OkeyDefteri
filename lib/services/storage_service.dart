@@ -60,7 +60,8 @@ class StorageService {
   }
 
   /// Oyun sil
-  static Future<void> deleteGame(String gameId) async {
+  /// [deleteFromCloud]: false ise yalnızca yerel veritabanından silinir (bulut yedeği korunur).
+  static Future<void> deleteGame(String gameId, {bool deleteFromCloud = false}) async {
     final prefs = await SharedPreferences.getInstance();
     final games = await getSavedGames();
     games.removeWhere((g) => g.id == gameId);
@@ -74,8 +75,10 @@ class StorageService {
     if (activeGame != null && activeGame.id == gameId) {
       await clearActiveGame();
     }
-    // Buluttan da sil
-    CloudService.deleteGame(gameId).catchError((_) {});
+    // Yalnızca kullanıcı açıkça istediğinde buluttan sil
+    if (deleteFromCloud) {
+      CloudService.deleteGame(gameId).catchError((_) {});
+    }
   }
 
   /// Bir oyuncunun tüm maçlardaki istatistiklerini getir

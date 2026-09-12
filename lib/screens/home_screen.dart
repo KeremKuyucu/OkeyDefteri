@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -31,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen>
   Game? _activeGame;
   int _totalGames = 0;
   bool _isSyncing = false;
+  StreamSubscription<AuthState>? _authSub;
 
   @override
   void initState() {
@@ -51,6 +53,16 @@ class _HomeScreenState extends State<HomeScreen>
     _animController.forward();
     _loadData();
     _checkForUpdates();
+    _authSub = AuthService.authStateChanges.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn) {
+        _autoSyncOnSignIn();
+      } else if (data.event == AuthChangeEvent.signedOut) {
+        if (mounted) {
+          _loadData();
+          setState(() {});
+        }
+      }
+    });
   }
 
   void _checkForUpdates() {
@@ -83,6 +95,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
+    _authSub?.cancel();
     _animController.dispose();
     super.dispose();
   }
@@ -118,8 +131,57 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _signOut() async {
-    await AuthService.signOut();
-    if (mounted) setState(() {});
+    setState(() => _isSyncing = true);
+    try {
+      await AuthService.signOut();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(Localization.t('cloud.signed_out')),
+            backgroundColor: AppTheme.surfaceCard,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        await _loadData();
+      }
+    } finally {
+      if (mounted) setState(() => _isSyncing = false);
+    }
+  }
+
+  Future<void> _autoSyncOnSignIn() async {
+    if (!AuthService.isSignedIn) return;
+    if (mounted) setState(() => _isSyncing = true);
+    try {
+      final localGames = await StorageService.getSavedGames();
+      final newGames = await CloudService.fetchAndMerge(localGames);
+      for (final game in newGames) {
+        await StorageService.saveGame(game);
+      }
+      if (!mounted) return;
+      await _loadData();
+      if (!mounted) return;
+      if (newGames.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              Localization.t('cloud.auto_sync_success',
+                  args: [newGames.length.toString()]),
+            ),
+            backgroundColor: AppTheme.lightGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Auto-sync on sign-in error: $e');
+    } finally {
+      if (mounted) setState(() => _isSyncing = false);
+    }
   }
 
   Future<void> _restoreFromCloud() async {
@@ -285,9 +347,9 @@ class _HomeScreenState extends State<HomeScreen>
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: () {
+                  onPressed: () async {
                     Navigator.pop(ctx);
-                    _signOut();
+                    await _signOut();
                   },
                   icon: const Icon(Icons.logout, color: AppTheme.dangerRed, size: 18),
                   label: Text(Localization.t('cloud.sign_out'),
@@ -481,6 +543,66 @@ class _HomeScreenState extends State<HomeScreen>
                     Localization.t('settings.telemetry'),
                     style: TextStyle(color: AppTheme.textPrimary),
                   ),
+                  onTap: () async {
+                    if (isTelemetryEnabled) {
+                      final shouldDisable = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          backgroundColor: AppTheme.surfaceDark,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          title: Text(
+                            Localization.t('settings.telemetry_dialog_title'),
+                            style: TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          content: Text(
+                            Localization.t('settings.telemetry_message'),
+                            style: TextStyle(
+                              color: AppTheme.textSecondary,
+                              fontSize: 14,
+                              height: 1.4,
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: Text(
+                                Localization.t('settings.keep_enabled'),
+                                style: TextStyle(
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.warningOrange,
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: Text(
+                                Localization.t('settings.disable_anyway'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (shouldDisable != true) return;
+                      await SettingsService.setTelemetryEnabled(false);
+                      setBottomSheetState(() {
+                        isTelemetryEnabled = false;
+                      });
+                    } else {
+                      await SettingsService.setTelemetryEnabled(true);
+                      setBottomSheetState(() {
+                        isTelemetryEnabled = true;
+                      });
+                    }
+                  },
                   trailing: Switch(
                     value: isTelemetryEnabled,
                     onChanged: (v) async {
@@ -489,37 +611,42 @@ class _HomeScreenState extends State<HomeScreen>
                           context: context,
                           builder: (ctx) => AlertDialog(
                             backgroundColor: AppTheme.surfaceDark,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                             title: Text(
-                              Localization.t('settings.are_you_sure'),
-                              style: TextStyle(color: AppTheme.textPrimary),
+                              Localization.t('settings.telemetry_dialog_title'),
+                              style: TextStyle(
+                                color: AppTheme.textPrimary,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             content: Text(
                               Localization.t('settings.telemetry_message'),
                               style: TextStyle(
                                 color: AppTheme.textSecondary,
-                                fontSize: 13,
+                                fontSize: 14,
+                                height: 1.4,
                               ),
                             ),
                             actions: [
                               TextButton(
-                                onPressed: () => Navigator.pop(ctx, true),
+                                onPressed: () => Navigator.pop(ctx, false),
                                 child: Text(
-                                  Localization.t('settings.disable_anyway'),
+                                  Localization.t('settings.keep_enabled'),
                                   style: TextStyle(
-                                    color: AppTheme.warningOrange,
+                                    color: AppTheme.textSecondary,
                                   ),
                                 ),
                               ),
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.accentGold,
+                                  backgroundColor: AppTheme.warningOrange,
+                                  foregroundColor: Colors.white,
                                 ),
-                                onPressed: () => Navigator.pop(ctx, false),
+                                onPressed: () => Navigator.pop(ctx, true),
                                 child: Text(
-                                  Localization.t('settings.keep_enabled'),
-                                  style: TextStyle(
-                                    color: AppTheme.backgroundDark,
-                                  ),
+                                  Localization.t('settings.disable_anyway'),
                                 ),
                               ),
                             ],

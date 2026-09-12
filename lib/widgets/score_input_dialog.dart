@@ -879,7 +879,7 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
                     _isOkeyFinish = v;
                     if (v) _isEldenFinish = false;
                   }),
-                  activeColor: AppTheme.warningOrange,
+                  activeThumbColor: AppTheme.warningOrange,
                 ),
               ),
               Container(
@@ -905,7 +905,7 @@ class _ScoreInputDialogState extends State<ScoreInputDialog> {
                     _isEldenFinish = v;
                     if (v) _isOkeyFinish = false;
                   }),
-                  activeColor: AppTheme.lightGreen,
+                  activeThumbColor: AppTheme.lightGreen,
                 ),
               ),
               _buildScoreButton(

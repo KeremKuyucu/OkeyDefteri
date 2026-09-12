@@ -44,9 +44,6 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:host="login-callback"
-                    android:scheme="io.supabase.okeydefteri" />
-                <data
-                    android:host="login-callback"
                     android:scheme="com.keremkuyucu.okeydefteri" />
             </intent-filter>
         </activity>
