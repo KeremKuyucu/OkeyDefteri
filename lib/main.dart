@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'services/ad_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'services/telemetry_service.dart';
@@ -12,9 +11,7 @@ import 'env.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  if (!kIsWeb) {
-    await MobileAds.instance.initialize();
-  }
+  await AdService.init();
   await Supabase.initialize(
     url: Env.supabaseUrl,
     publishableKey: Env.supabaseAnonKey,

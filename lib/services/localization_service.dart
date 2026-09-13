@@ -10,10 +10,12 @@ class Localization {
   };
 
   static Map<String, dynamic>? _localizedStrings;
-  static String _currentLanguage = 'tur';
+  static String _currentLanguage = '';
   static List<String> get supportedLanguages => languages.keys.toList();
   static String get currentLanguage => _currentLanguage;
-  static String get currentLanguageName => languages[_currentLanguage]!;
+
+  static String getDisplayName(String iso3Code) =>
+      languages[iso3Code] ?? iso3Code;
 
   static Future<void> init() async {
     final lang = SettingsService.getLanguage();
@@ -76,7 +78,4 @@ class Localization {
 
     return text.replaceAll('\\n', '\n');
   }
-
-  static String getDisplayName(String iso3Code) =>
-      languages[iso3Code] ?? iso3Code;
 }

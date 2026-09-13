@@ -109,7 +109,7 @@
     "forgot_round_continue": "Yes, Continue",
     "undo_score_title": "Undo Last Score",
     "round_winner_mode": "Winner",
-    "round_no_winner_mode": "Nobody Finished (Tiles Out)",
+    "round_no_winner_mode": "Nobody Finished",
     "who_finished": "Who Finished?",
     "how_finished": "How Finished?",
     "no_winner_desc": "Tiles ran out, nobody could finish. Everyone enters their remaining tile points.",

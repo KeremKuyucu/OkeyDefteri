@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
 import '../services/storage_service.dart';
@@ -698,123 +697,12 @@ class _HomeScreenState extends State<HomeScreen>
                     DeveloperInfo.show(context);
                   },
                 ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.import_export,
-                    color: AppTheme.accentGold,
-                  ),
-                  title: Text(
-                    Localization.t('settings.import_export'),
-                    style: TextStyle(color: AppTheme.textPrimary),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showImportExportDialog();
-                  },
-                ),
               ],
             ),
           ),
         );
       },
     ));
-  }
-
-  void _showImportExportDialog() async {
-    final data = await StorageService.exportData();
-    final controller = TextEditingController(text: data);
-
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surfaceDark,
-        title: Text(
-          Localization.t('settings.import_export'),
-          style: TextStyle(color: AppTheme.textPrimary),
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: TextField(
-            controller: controller,
-            maxLines: 15,
-            style: const TextStyle(
-              color: AppTheme.textSecondary,
-              fontFamily: 'monospace',
-              fontSize: 12,
-            ),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: AppTheme.backgroundDark,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              hintText: Localization.t('settings.import_export_info'),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: controller.text));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(Localization.t('settings.all_data_copied')),
-                ),
-              );
-            },
-            child: Text(
-              Localization.t('settings.copy_all'),
-              style: TextStyle(color: AppTheme.accentGold),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'İptal',
-              style: TextStyle(color: AppTheme.textSecondary),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accentGold,
-            ),
-            onPressed: () async {
-              try {
-                await StorageService.importData(controller.text);
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        Localization.t('settings.data_successfully_updated'),
-                      ),
-                    ),
-                  );
-                  OkeyDefteriApp.restartApp(context);
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(Localization.t('settings.invalid_json')),
-                    ),
-                  );
-                }
-              }
-            },
-            child: Text(
-              Localization.t('common.save'),
-              style: TextStyle(
-                color: AppTheme.backgroundDark,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   @override

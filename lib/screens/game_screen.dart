@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../services/ad_service.dart';
 import '../models/game_models.dart';
 import '../theme/app_theme.dart';
 import '../services/storage_service.dart';
@@ -27,40 +26,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
-  InterstitialAd? _interstitialAd;
-  bool _isInterstitialAdLoaded = false;
-
-  String get _interstitialAdUnitId {
-    if (kDebugMode) {
-      return defaultTargetPlatform == TargetPlatform.android
-          ? 'ca-app-pub-3940256099942544/1033173712'
-          : 'ca-app-pub-3940256099942544/4411468910';
-    }
-    return defaultTargetPlatform == TargetPlatform.android
-        ? 'ca-app-pub-4674396016131447/8600025809'
-        : 'ca-app-pub-3940256099942544/4411468910';
-  }
-
-  void _loadInterstitialAd() {
-    if (kIsWeb) return;
-    InterstitialAd.load(
-      adUnitId: _interstitialAdUnitId,
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          debugPrint('InterstitialAd loaded.');
-          _interstitialAd = ad;
-          _isInterstitialAdLoaded = true;
-        },
-        onAdFailedToLoad: (LoadAdError error) {
-          debugPrint('InterstitialAd failed to load: $error');
-          _isInterstitialAdLoaded = false;
-          _interstitialAd = null;
-        },
-      ),
-    );
-  }
-
   @override
   void initState() {
     super.initState();
@@ -72,13 +37,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _pulseAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
-    _loadInterstitialAd();
+    AdService.loadInterstitialAd();
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
-    _interstitialAd?.dispose();
     super.dispose();
   }
 
@@ -459,27 +423,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     AudioVibrationService.playClickSound();
     AudioVibrationService.vibrateHeavy();
 
-    if (_isInterstitialAdLoaded && _interstitialAd != null) {
-      _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
-        onAdDismissedFullScreenContent: (ad) {
-          ad.dispose();
-          _isInterstitialAdLoaded = false;
-          _interstitialAd = null;
-          _advanceRound();
-          _loadInterstitialAd();
-        },
-        onAdFailedToShowFullScreenContent: (ad, error) {
-          ad.dispose();
-          _isInterstitialAdLoaded = false;
-          _interstitialAd = null;
-          _advanceRound();
-          _loadInterstitialAd();
-        },
-      );
-      _interstitialAd!.show();
-    } else {
-      _advanceRound();
-    }
+    AdService.showInterstitialAd(
+      onDismissed: _advanceRound,
+    );
   }
 
   void _prevRound() {
