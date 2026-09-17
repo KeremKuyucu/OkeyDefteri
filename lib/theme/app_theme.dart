@@ -50,6 +50,22 @@ class AppTheme {
           onPrimary: Colors.white,
           onSecondary: Colors.black,
           onSurface: textPrimary,
+          inverseSurface: surfaceCardLight,
+          onInverseSurface: Colors.white,
+        ),
+        snackBarTheme: SnackBarThemeData(
+          backgroundColor: surfaceCardLight,
+          contentTextStyle: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+          actionTextColor: accentGold,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 6,
         ),
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,

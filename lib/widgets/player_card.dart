@@ -10,6 +10,8 @@ class PlayerCard extends StatelessWidget {
   final VoidCallback? onToggleCiftli;
   final bool isHighlighted;
   final String? nickname;
+  final bool isHigherScoreBetter;
+  final bool hideCiftliToggle;
 
   const PlayerCard({
     super.key,
@@ -20,11 +22,36 @@ class PlayerCard extends StatelessWidget {
     this.onToggleCiftli,
     this.isHighlighted = false,
     this.nickname,
+    this.isHigherScoreBetter = false,
+    this.hideCiftliToggle = false,
   });
+
+  Color _getScoreColor() {
+    if (isHigherScoreBetter) {
+      if (player.totalScore > 0) return AppTheme.successGreen;
+      if (player.totalScore < 0) return AppTheme.dangerRed;
+      return AppTheme.textPrimary;
+    } else {
+      if (player.totalScore < 0) return AppTheme.successGreen;
+      if (player.totalScore > 0) return AppTheme.dangerRed;
+      return AppTheme.textPrimary;
+    }
+  }
+
+  Color _getScoreBgColor() {
+    if (isHigherScoreBetter) {
+      if (player.totalScore > 0) return AppTheme.successGreen.withValues(alpha: 0.15);
+      if (player.totalScore < 0) return AppTheme.dangerRed.withValues(alpha: 0.15);
+      return AppTheme.surfaceCardLight;
+    } else {
+      if (player.totalScore < 0) return AppTheme.successGreen.withValues(alpha: 0.15);
+      if (player.totalScore > 0) return AppTheme.dangerRed.withValues(alpha: 0.15);
+      return AppTheme.surfaceCardLight;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final isNegative = player.totalScore < 0;
     final isVertical = position == 1 || position == 3;
 
     return GestureDetector(
@@ -32,19 +59,25 @@ class PlayerCard extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
+        constraints: BoxConstraints(
+          minWidth: isVertical ? 84 : 110,
+          maxWidth: isVertical ? 96 : 140,
+        ),
         decoration: AppTheme.playerCardDecoration(isHighlighted),
         padding: EdgeInsets.symmetric(
-          horizontal: isVertical ? 10 : 14,
-          vertical: isVertical ? 14 : 10,
+          horizontal: isVertical ? 8 : 12,
+          vertical: isVertical ? 10 : 8,
         ),
         child: isVertical
-            ? _buildVerticalLayout(isNegative)
-            : _buildHorizontalLayout(isNegative),
+            ? _buildVerticalLayout()
+            : _buildHorizontalLayout(),
       ),
     );
   }
 
-  Widget _buildHorizontalLayout(bool isNegative) {
+  Widget _buildHorizontalLayout() {
+    final showTeamName = team.name.isNotEmpty && team.name != player.name;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -68,16 +101,17 @@ class PlayerCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  Text(
-                    nickname ?? team.name,
-                    style: TextStyle(
-                      color: nickname != null ? AppTheme.accentGold : AppTheme.textMuted,
-                      fontSize: 10,
-                      fontWeight: nickname != null ? FontWeight.w600 : FontWeight.normal,
+                  if (showTeamName)
+                    Text(
+                      team.name,
+                      style: const TextStyle(
+                        color: AppTheme.textMuted,
+                        fontSize: 10,
+                        fontWeight: FontWeight.normal,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
                 ],
               ),
             ),
@@ -88,21 +122,13 @@ class PlayerCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: isNegative
-                ? AppTheme.successGreen.withValues(alpha: 0.15)
-                : player.totalScore > 0
-                    ? AppTheme.dangerRed.withValues(alpha: 0.15)
-                    : AppTheme.surfaceCardLight,
+            color: _getScoreBgColor(),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
             '${player.totalScore}',
             style: TextStyle(
-              color: isNegative
-                  ? AppTheme.successGreen
-                  : player.totalScore > 0
-                      ? AppTheme.dangerRed
-                      : AppTheme.textPrimary,
+              color: _getScoreColor(),
               fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
@@ -116,15 +142,19 @@ class PlayerCard extends StatelessWidget {
             _miniStat('🏆', '${player.winCount}'),
             const SizedBox(width: 6),
             _miniStat('⚠️', '${player.penaltyCount}'),
-            const SizedBox(width: 6),
-            _buildCiftliToggle(),
+            if (!hideCiftliToggle) ...[
+              const SizedBox(width: 6),
+              _buildCiftliToggle(),
+            ],
           ],
         ),
       ],
     );
   }
 
-  Widget _buildVerticalLayout(bool isNegative) {
+  Widget _buildVerticalLayout() {
+    final showTeamName = team.name.isNotEmpty && team.name != player.name;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -141,14 +171,14 @@ class PlayerCard extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
         ),
-        if (nickname != null) ...[
+        if (showTeamName) ...[
           const SizedBox(height: 1),
           Text(
-            nickname!,
+            team.name,
             style: const TextStyle(
-              color: AppTheme.accentGold,
+              color: AppTheme.textMuted,
               fontSize: 9,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.normal,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -159,21 +189,13 @@ class PlayerCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: isNegative
-                ? AppTheme.successGreen.withValues(alpha: 0.15)
-                : player.totalScore > 0
-                    ? AppTheme.dangerRed.withValues(alpha: 0.15)
-                    : AppTheme.surfaceCardLight,
+            color: _getScoreBgColor(),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(
             '${player.totalScore}',
             style: TextStyle(
-              color: isNegative
-                  ? AppTheme.successGreen
-                  : player.totalScore > 0
-                      ? AppTheme.dangerRed
-                      : AppTheme.textPrimary,
+              color: _getScoreColor(),
               fontSize: 16,
               fontWeight: FontWeight.w800,
             ),
@@ -186,8 +208,10 @@ class PlayerCard extends StatelessWidget {
             _miniStat('🏆', '${player.winCount}'),
             const SizedBox(width: 4),
             _miniStat('⚠️', '${player.penaltyCount}'),
-            const SizedBox(width: 4),
-            _buildCiftliToggle(small: true),
+            if (!hideCiftliToggle) ...[
+              const SizedBox(width: 4),
+              _buildCiftliToggle(small: true),
+            ],
           ],
         ),
       ],

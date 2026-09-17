@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:okey_defteri/services/ad_service.dart';
 
@@ -62,6 +63,11 @@ void main() {
     });
 
     test('showInterstitialAd invokes onDismissed if no ad is loaded on Android', () {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMessageHandler(
+        'plugins.flutter.io/google_mobile_ads',
+        (ByteData? message) async => const StandardMethodCodec().encodeSuccessEnvelope(null),
+      );
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       bool dismissed = false;
 

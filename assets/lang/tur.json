@@ -10,6 +10,7 @@
     "no": "Hayır",
     "pass": "Pas",
     "close": "Kapat",
+    "undo": "Geri Al",
     "continue": "Devam Et",
     "delete": "Sil",
     "success": "Başarılı",
@@ -25,7 +26,7 @@
     "language": "Seçilen Dil: ",
     "vibration": "Titreşim",
     "sound_effects": "Ses Efektleri",
-    "telemetry": "Anonim Kullanıcı Verisi Gönder",
+    "telemetry": "Kullanıcı Verisi Gönder",
     "toxic_nicknames": "Küfürlü Lakaplar",
     "about": "Uygulama Hakkında",
     "import_export": "Verileri İçe/Dışa Aktar",
@@ -112,10 +113,12 @@
     "who_finished": "Kim Bitirdi?",
     "how_finished": "Nasıl Bitti?",
     "no_winner_desc": "Yerde taş bitti, kimse elini açıp bitiremedi. Herkes elindeki kalan taş puanını yazar.",
+    "no_winner_desc_classic": "Yerdeki taş bitti, kimse açamadı herkes 0 puan aldı.",
     "no_winner_saved": "Kimse bitmedi — Elde kalan taş puanları kaydedildi.",
     "points_with_win": "+1 🏆 Galibiyet",
     "teammate_badge": "Eş",
-    "teammate_no_penalty": "Takım arkadaşı ceza almaz"
+    "teammate_no_penalty": "Takım arkadaşı ceza almaz",
+    "table_banter": "Masa Muhabbeti"
   },
   "new_game": {
     "title": "Yeni Oyun",
@@ -140,7 +143,8 @@
     "mode_solo": "Tekli",
     "mode_solo_desc": "4 bireysel • Takımsız",
     "desc_americano": "12 tur • Bireysel",
-    "desc_101": "Klasik • Takım"
+    "desc_101": "Klasik • Takım",
+    "desc_normal_okey": "Düz Okey"
   },
   "past_games": {
     "title": "Geçmiş Oyunlar",
@@ -203,7 +207,12 @@
     "americano_okey_atti": "Okey Atma",
     "americano_yanlis_el_acti": "Yanlış El Açma",
     "americano_islek_atarak_bitti": "İşlek Atarak Bitti",
-    "americano_okey_atarak_bitti": "Okey Atarak Bitti"
+    "americano_okey_atarak_bitti": "Okey Atarak Bitti",
+    "americano_yanlis_bitti": "Yanlış Bitti",
+    "normal_okey_bitti": "Normal Bitti",
+    "normal_okey_okey_atti": "Okey Atarak Bitti",
+    "normal_okey_cift_bitti": "Çift Bitti",
+    "normal_okey_cift_ve_okey_bitti": "Çift ve Okey Atarak Bitti"
   },
   "nicknames": {
     "early_start_1": "🃏 Bismillah dedik amına koduğum, bakalım ilk kim götünü yırtacak",
@@ -307,6 +316,7 @@
     "round_winner_okey": "🃏🏆 {0} okey atarak bu turu kazandı! (-100)",
     "finish_normal": "Normal Bitti (-50)",
     "finish_okey": "Okey Atarak Bitti (-100)",
+    "finish_wrong": "Yanlış Bitti (+100)",
     "teammate_badge": "Eş",
     "teammate_no_penalty": "Takım arkadaşı ceza almaz",
     "ground_card": "Yerden Kart",
@@ -315,5 +325,15 @@
     "last_round": "Son tur! 👑",
     "game_rules": "Americano Kuralları",
     "rules_text": "Her turda belirli bir kombinasyonu açmanız gerekir.\n\nYerden kart: Sıranızda düşen kartı alabilirsiniz. Diğer oyuncular desteden ceza kartı çekerek yerden alabilir (maks 3 kez).\n\nJoker = 50 puan \u2022 İşlek atma = 50 puan \u2022 Hile = 50 puan"
+  },
+  "normal_okey": {
+    "title": "Normal Okey",
+    "mode_name": "Klasik Okey",
+    "finish_options": "Bitirme Şekli Seçenekleri",
+    "okey_finish": "Okey Atma (2 Puan)",
+    "cift_finish": "Çift Bitme (2 Puan)",
+    "both_multiplier": "Katlandı: Okey + Çift (4 Puan)",
+    "base_point": "Normal Bitiş (1 Puan)",
+    "points_preview": "{0} {1} Puan Alıyor"
   }
 }

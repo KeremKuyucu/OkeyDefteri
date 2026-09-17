@@ -64,7 +64,13 @@ class _NewGameScreenState extends State<NewGameScreen>
     if (p1.isEmpty || p2.isEmpty || p3.isEmpty || p4.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(Localization.t('new_game.player_name_required')),
+          content: Text(
+            Localization.t('new_game.player_name_required'),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           backgroundColor: AppTheme.dangerRed,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -432,10 +438,12 @@ class _NewGameScreenState extends State<NewGameScreen>
         Row(
           children: [
             Expanded(child: _modeChip(GameMode.okey101)),
-            const SizedBox(width: 10),
-            Expanded(child: _modeChip(GameMode.americano)),
+            const SizedBox(width: 8),
+            Expanded(child: _modeChip(GameMode.normalOkey)),
           ],
         ),
+        const SizedBox(height: 8),
+        _modeChip(GameMode.americano),
         // Americano alt seçeneği: Takımlı vs Tekli
         if (isAmericanoSelected) ...[
           const SizedBox(height: 10),
@@ -516,7 +524,7 @@ class _NewGameScreenState extends State<NewGameScreen>
         ),
         child: Row(
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 16)),
+            Text(emoji, style: const TextStyle(fontSize: 18)),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -556,13 +564,25 @@ class _NewGameScreenState extends State<NewGameScreen>
             (_selectedMode == GameMode.americano ||
                 _selectedMode == GameMode.americanoSolo));
     final isAmericano = mode == GameMode.americano;
-    final label = isAmericano
-        ? Localization.t('americano.mode_name')
-        : Localization.t('americano.mode_101');
-    final emoji = isAmericano ? '🃏' : '🀄';
-    final desc = isAmericano
-        ? Localization.t('new_game.desc_americano')
-        : Localization.t('new_game.desc_101');
+    final isNormalOkey = mode == GameMode.normalOkey;
+
+    final String label;
+    final String emoji;
+    final String desc;
+
+    if (isAmericano) {
+      label = Localization.t('americano.mode_name');
+      emoji = '🃏';
+      desc = Localization.t('new_game.desc_americano');
+    } else if (isNormalOkey) {
+      label = Localization.t('normal_okey.mode_name');
+      emoji = '🎴';
+      desc = Localization.t('new_game.desc_normal_okey');
+    } else {
+      label = Localization.t('americano.mode_101');
+      emoji = '🀄';
+      desc = Localization.t('new_game.desc_101');
+    }
 
     return GestureDetector(
       onTap: () => setState(() {
@@ -581,21 +601,27 @@ class _NewGameScreenState extends State<NewGameScreen>
               ? (isAmericano ? AppTheme.goldGradient : null)
               : null,
           color: isSelected && !isAmericano
-              ? AppTheme.lightGreen.withValues(alpha: 0.15)
+              ? (isNormalOkey
+                  ? AppTheme.accentGold.withValues(alpha: 0.15)
+                  : AppTheme.lightGreen.withValues(alpha: 0.15))
               : isSelected
               ? null
               : AppTheme.surfaceCard,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected
-                ? (isAmericano ? AppTheme.accentGold : AppTheme.lightGreen)
+                ? (isAmericano
+                    ? AppTheme.accentGold
+                    : isNormalOkey
+                        ? AppTheme.accentGold
+                        : AppTheme.lightGreen)
                 : AppTheme.surfaceCardLight,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: (isAmericano
+                    color: (isAmericano || isNormalOkey
                             ? AppTheme.accentGold
                             : AppTheme.lightGreen)
                         .withValues(alpha: 0.25),
@@ -617,7 +643,11 @@ class _NewGameScreenState extends State<NewGameScreen>
                     label,
                     style: TextStyle(
                       color: isSelected
-                          ? (isAmericano ? Colors.black : AppTheme.lightGreen)
+                          ? (isAmericano
+                              ? Colors.black
+                              : isNormalOkey
+                                  ? AppTheme.accentGold
+                                  : AppTheme.lightGreen)
                           : AppTheme.textPrimary,
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
@@ -641,7 +671,11 @@ class _NewGameScreenState extends State<NewGameScreen>
               Icon(
                 Icons.check_circle_rounded,
                 size: 18,
-                color: isAmericano ? Colors.black54 : AppTheme.lightGreen,
+                color: isAmericano
+                    ? Colors.black54
+                    : isNormalOkey
+                        ? AppTheme.accentGold
+                        : AppTheme.lightGreen,
               ),
           ],
         ),

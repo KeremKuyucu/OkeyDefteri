@@ -7,7 +7,9 @@ import '../widgets/player_card.dart';
 import '../widgets/team_score_bar.dart';
 import '../widgets/americano_score_dialog.dart';
 import '../widgets/ad_banner_widget.dart';
+import '../widgets/table_banter_bar.dart';
 import 'score_history_screen.dart';
+import 'stats_screen.dart';
 import '../services/settings_service.dart';
 import '../services/localization_service.dart';
 
@@ -70,7 +72,19 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
   Future<void> _openPenaltyDialog(Player player) async {
     if (_game.isFinished) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(Localization.t('game.finished'))),
+        SnackBar(
+          content: Text(
+            Localization.t('game.finished'),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
       );
       return;
     }
@@ -216,7 +230,10 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
                 ? Localization.t('americano.round_winner_okey',
                     args: [winner.name])
                 : Localization.t('americano.round_winner', args: [winner.name]),
-            style: const TextStyle(fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: isOkey ? Colors.white : Colors.black87,
+            ),
           ),
           backgroundColor:
               isOkey ? const Color(0xFF7E57C2) : AppTheme.accentGold,
@@ -286,7 +303,10 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
               ? Localization.t('americano.last_round')
               : Localization.t('americano.round_of',
                   args: [_game.currentRound]),
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: isLast ? Colors.black87 : Colors.white,
+          ),
         ),
         backgroundColor:
             isLast ? AppTheme.accentGold : AppTheme.lightGreen,
@@ -311,66 +331,6 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
     );
   }
 
-  void _prevRound() {
-    if (_game.isFinished) return;
-    if (_game.currentRound <= 1) return;
-    AudioVibrationService.playClickSound();
-    AudioVibrationService.vibrateHeavy();
-
-    final prevRound = _game.currentRound - 1;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surfaceDark,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(Localization.t('game.prev_round_confirm_title'),
-            style: const TextStyle(color: AppTheme.textPrimary)),
-        content: Text(
-          Localization.t('game.prev_round_confirm', args: [prevRound]),
-          style: const TextStyle(color: AppTheme.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(Localization.t('common.cancel'),
-                style: const TextStyle(color: AppTheme.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                for (final p in _game.allPlayers) {
-                  p.scores.removeWhere(
-                      (s) => s.roundNumber == _game.currentRound);
-                }
-                _game.currentRound = prevRound;
-              });
-              _saveGame();
-              Navigator.pop(ctx);
-              _bannerController
-                ..reset()
-                ..forward();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    Localization.t('game.round', args: [_game.currentRound]),
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  backgroundColor: AppTheme.dangerRed,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.dangerRed),
-            child: Text(Localization.t('game.prev_round_undo')),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _endGame() {
     if (_game.isFinished) return;
@@ -514,7 +474,15 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
             // Takım toplam skorları — solo modda gizlenir
             if (!_game.isAmericanoSolo)
               TeamScoreBar(team1: _game.team1, team2: _game.team2),
-            if (!_game.isAmericanoSolo) const SizedBox(height: 6),
+            if (!_game.isAmericanoSolo) const SizedBox(height: 4),
+
+            // Canlı Masa Muhabbeti / Spiker Bandı
+            TableBanterBar(
+              players: _game.allPlayers,
+              roundNumber: _game.currentRound,
+            ),
+            const SizedBox(height: 4),
+
             Expanded(child: _buildGameTable()),
             const AdBannerWidget(),
             _buildBottomBar(),
@@ -659,6 +627,8 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
             itemBuilder: (ctx) => [
               _popupItem('history', Icons.history,
                   Localization.t('game.history')),
+              _popupItem('stats', Icons.analytics_outlined,
+                  Localization.t('game.stats')),
               _popupItem('rules', Icons.menu_book,
                   Localization.t('americano.game_rules')),
               if (!_game.isFinished)
@@ -673,6 +643,14 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
                     MaterialPageRoute(
                       builder: (ctx) =>
                           ScoreHistoryScreen(game: _game),
+                    ),
+                  );
+                case 'stats':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (ctx) =>
+                          StatsScreen(game: _game),
                     ),
                   );
                 case 'rules':
@@ -728,10 +706,6 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
                       player: _game.team1.player1,
                       team: _game.team1,
                       position: 0,
-                      nickname: _game.team1.player1.getNickname(
-                        _game.allPlayers,
-                        _game.currentRound,
-                      ),
                       onTap: () => _openPenaltyDialog(_game.team1.player1),
                       onToggleCiftli: () {},
                     ),
@@ -750,10 +724,6 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
                           player: _game.team2.player2,
                           team: _game.team2,
                           position: 3,
-                          nickname: _game.team2.player2.getNickname(
-                            _game.allPlayers,
-                            _game.currentRound,
-                          ),
                           onTap: () =>
                               _openPenaltyDialog(_game.team2.player2),
                           onToggleCiftli: () {},
@@ -818,10 +788,6 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
                           player: _game.team2.player1,
                           team: _game.team2,
                           position: 1,
-                          nickname: _game.team2.player1.getNickname(
-                            _game.allPlayers,
-                            _game.currentRound,
-                          ),
                           onTap: () =>
                               _openPenaltyDialog(_game.team2.player1),
                           onToggleCiftli: () {},
@@ -838,10 +804,6 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
                       player: _game.team1.player2,
                       team: _game.team1,
                       position: 2,
-                      nickname: _game.team1.player2.getNickname(
-                        _game.allPlayers,
-                        _game.currentRound,
-                      ),
                       onTap: () => _openPenaltyDialog(_game.team1.player2),
                       onToggleCiftli: () {},
                     ),
@@ -880,13 +842,6 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
             ),
           ),
           if (!_game.isFinished) ...[
-            if (_game.currentRound > 1)
-              _bottomButton(
-                icon: Icons.skip_previous_rounded,
-                label: Localization.t('game.prev_round'),
-                onTap: _prevRound,
-                isDanger: true,
-              ),
             // El bitti — masa merkezine de dokunulabilir ama kolaylık için buton
             _bottomButton(
               icon: Icons.casino_rounded,
@@ -906,6 +861,14 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
               isDanger: true,
             ),
           ],
+          _bottomButton(
+            icon: Icons.analytics_outlined,
+            label: Localization.t('game.stats'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (ctx) => StatsScreen(game: _game)),
+            ),
+          ),
         ],
       ),
     );

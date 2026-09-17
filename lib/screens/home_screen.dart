@@ -109,8 +109,18 @@ class _HomeScreenState extends State<HomeScreen>
       if (error != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(error),
+            content: Text(
+              error,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             backgroundColor: AppTheme.dangerRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -121,8 +131,16 @@ class _HomeScreenState extends State<HomeScreen>
           SnackBar(
             content: Text(
               Localization.t('cloud.sign_in_error', args: [e.toString()]),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             backgroundColor: AppTheme.dangerRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -136,8 +154,14 @@ class _HomeScreenState extends State<HomeScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(Localization.t('cloud.signed_out')),
-            backgroundColor: AppTheme.surfaceCard,
+            content: Text(
+              Localization.t('cloud.signed_out'),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            backgroundColor: AppTheme.surfaceCardLight,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12)),
@@ -168,6 +192,10 @@ class _HomeScreenState extends State<HomeScreen>
             content: Text(
               Localization.t('cloud.auto_sync_success',
                   args: [newGames.length.toString()]),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             backgroundColor: AppTheme.lightGreen,
             behavior: SnackBarBehavior.floating,
@@ -202,9 +230,13 @@ class _HomeScreenState extends State<HomeScreen>
                       'cloud.restore_success',
                       args: [newGames.length.toString()],
                     ),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             backgroundColor:
-                newGames.isEmpty ? AppTheme.surfaceCard : AppTheme.lightGreen,
+                newGames.isEmpty ? AppTheme.surfaceCardLight : AppTheme.lightGreen,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12)),
@@ -228,6 +260,10 @@ class _HomeScreenState extends State<HomeScreen>
           SnackBar(
             content: Text(
               Localization.t('cloud.push_success', args: [count.toString()]),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             backgroundColor: AppTheme.lightGreen,
             behavior: SnackBarBehavior.floating,
@@ -901,8 +937,14 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ],
               ),
-              child: const Center(
-                child: Text('🎴', style: TextStyle(fontSize: 54)),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(30),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                ),
               ),
             ),
           ],

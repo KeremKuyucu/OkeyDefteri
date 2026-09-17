@@ -49,3 +49,8 @@ app.*.map.json
 
 # Heap Dumps
 *.hprof
+
+# Deploy & Screenshot Automation
+screenshots/
+__pycache__/
+.vercel_backup/

@@ -69,7 +69,7 @@ class TelemetryService {
 
       final bodyData = {
         'uid': effectiveUid,
-        'timestamp': DateTime.now().toIso8601String(),
+        'timestamp': DateTime.now().toUtc().toIso8601String(),
         'app': 'okey_defteri',
         'event': eventName,
         'platform': platform,

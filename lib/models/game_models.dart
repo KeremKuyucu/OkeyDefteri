@@ -3,7 +3,7 @@ import 'dart:math';
 import '../services/localization_service.dart';
 
 /// Oyun modu
-enum GameMode { okey101, americano, americanoSolo }
+enum GameMode { okey101, americano, americanoSolo, normalOkey }
 
 /// Skor giriş türleri
 enum ScoreType {
@@ -22,12 +22,18 @@ enum ScoreType {
   americanoEldeKalan, // Elde kalan kart değeri (Americano)
   americanoIslek, // İşlek atma cezası +50 (Americano)
   americanoHile, // Hile yakalanma cezası +50 (Americano)
-  americanoKazandi, // Turu kazandı (0 puan, işaret) (Americano)
+  americanoKazandi, // Turu kazandı (-50 puan) (Americano)
   americanoTakimYokOkeyAldi, // Takım yok okeyini alma cezası +50 (Americano)
   americanoOkeyAtti, // Okey atma cezası +50 (Americano)
   americanoYanlisElActi, // Yanlış el açma cezası +50 (Americano)
   americanoIslekAtarakBitti, // İşlek atarak bitti +100 puan ceza (Americano)
   americanoOkeyAtarakBitti, // Okey atarak bitti -100 puan (Americano)
+  americanoYanlisBitti, // Yanlış bitti cezası +100 puan (Americano)
+  // Normal Okey'e özel
+  normalOkeyBitti, // Kazanan - 1 puan
+  normalOkeyAtarakBitti, // Kazanan (Okey atarak) - 2 puan
+  normalOkeyCiftBitti, // Kazanan (Çift biterek) - 2 puan
+  normalOkeyCiftVeOkeyBitti, // Kazanan (Hem Çift hem Okey atarak) - 4 puan
 }
 
 extension ScoreTypeExtension on ScoreType {
@@ -73,6 +79,16 @@ extension ScoreTypeExtension on ScoreType {
         return Localization.t('score_types.americano_islek_atarak_bitti');
       case ScoreType.americanoOkeyAtarakBitti:
         return Localization.t('score_types.americano_okey_atarak_bitti');
+      case ScoreType.americanoYanlisBitti:
+        return Localization.t('score_types.americano_yanlis_bitti');
+      case ScoreType.normalOkeyBitti:
+        return Localization.t('score_types.normal_okey_bitti');
+      case ScoreType.normalOkeyAtarakBitti:
+        return Localization.t('score_types.normal_okey_okey_atti');
+      case ScoreType.normalOkeyCiftBitti:
+        return Localization.t('score_types.normal_okey_cift_bitti');
+      case ScoreType.normalOkeyCiftVeOkeyBitti:
+        return Localization.t('score_types.normal_okey_cift_ve_okey_bitti');
     }
   }
 
@@ -118,6 +134,16 @@ extension ScoreTypeExtension on ScoreType {
         return '🎯🏁';
       case ScoreType.americanoOkeyAtarakBitti:
         return '🃏🏆';
+      case ScoreType.americanoYanlisBitti:
+        return '⚠️❌';
+      case ScoreType.normalOkeyBitti:
+        return '✅';
+      case ScoreType.normalOkeyAtarakBitti:
+        return '🃏🏆';
+      case ScoreType.normalOkeyCiftBitti:
+        return '👥🏆';
+      case ScoreType.normalOkeyCiftVeOkeyBitti:
+        return '👑🃏';
     }
   }
 
@@ -163,6 +189,16 @@ extension ScoreTypeExtension on ScoreType {
         return 100;
       case ScoreType.americanoOkeyAtarakBitti:
         return -100;
+      case ScoreType.americanoYanlisBitti:
+        return 100;
+      case ScoreType.normalOkeyBitti:
+        return 1;
+      case ScoreType.normalOkeyAtarakBitti:
+        return 2;
+      case ScoreType.normalOkeyCiftBitti:
+        return 2;
+      case ScoreType.normalOkeyCiftVeOkeyBitti:
+        return 4;
     }
   }
 
@@ -179,7 +215,8 @@ extension ScoreTypeExtension on ScoreType {
         this == ScoreType.americanoTakimYokOkeyAldi ||
         this == ScoreType.americanoOkeyAtti ||
         this == ScoreType.americanoYanlisElActi ||
-        this == ScoreType.americanoIslekAtarakBitti;
+        this == ScoreType.americanoIslekAtarakBitti ||
+        this == ScoreType.americanoYanlisBitti;
   }
 
   /// Americano'ya mı özel?
@@ -192,7 +229,16 @@ extension ScoreTypeExtension on ScoreType {
         this == ScoreType.americanoOkeyAtti ||
         this == ScoreType.americanoYanlisElActi ||
         this == ScoreType.americanoIslekAtarakBitti ||
-        this == ScoreType.americanoOkeyAtarakBitti;
+        this == ScoreType.americanoOkeyAtarakBitti ||
+        this == ScoreType.americanoYanlisBitti;
+  }
+
+  /// Normal Okey'e mi özel?
+  bool get isNormalOkey {
+    return this == ScoreType.normalOkeyBitti ||
+        this == ScoreType.normalOkeyAtarakBitti ||
+        this == ScoreType.normalOkeyCiftBitti ||
+        this == ScoreType.normalOkeyCiftVeOkeyBitti;
   }
 
   /// Bu tür bir bitirme türü mü?
@@ -203,7 +249,12 @@ extension ScoreTypeExtension on ScoreType {
         this == ScoreType.okeyAtarakEldenBitti ||
         this == ScoreType.americanoKazandi ||
         this == ScoreType.americanoIslekAtarakBitti ||
-        this == ScoreType.americanoOkeyAtarakBitti;
+        this == ScoreType.americanoOkeyAtarakBitti ||
+        this == ScoreType.americanoYanlisBitti ||
+        this == ScoreType.normalOkeyBitti ||
+        this == ScoreType.normalOkeyAtarakBitti ||
+        this == ScoreType.normalOkeyCiftBitti ||
+        this == ScoreType.normalOkeyCiftVeOkeyBitti;
   }
 
   /// Bu ceza türü için "kim yaptı?" sorusu sorulacak mı?
@@ -339,8 +390,12 @@ class Player {
     // 1. SIRALAMA
     // ============================================================
 
+    final isNormal = allPlayers
+        .any((p) => p.scores.any((s) => s.type.isNormalOkey));
     final sorted = List<Player>.from(allPlayers)
-      ..sort((a, b) => a.totalScore.compareTo(b.totalScore));
+      ..sort((a, b) => isNormal
+          ? b.totalScore.compareTo(a.totalScore)
+          : a.totalScore.compareTo(b.totalScore));
 
     final myRank = sorted.indexWhere((p) => p.id == id);
 
@@ -387,12 +442,15 @@ class Player {
         )
         .length;
 
+    final normalOkeyWins = scores.where((s) => s.type.isNormalOkey).length;
+
     final totalWins =
         okeyBitti +
         okeyEldenBitti +
         eldenBitti +
         normalBitti +
-        americanoKazandi;
+        americanoKazandi +
+        normalOkeyWins;
 
     // ============================================================
     // 3. HATA / CEZA İSTATİSTİKLERİ
@@ -923,15 +981,24 @@ class Game {
 
   Player? get leadingPlayer {
     final sorted = List<Player>.from(allPlayers)
-      ..sort((a, b) => a.totalScore.compareTo(b.totalScore));
+      ..sort((a, b) => isNormalOkey
+          ? b.totalScore.compareTo(a.totalScore)
+          : a.totalScore.compareTo(b.totalScore));
     return sorted.isNotEmpty ? sorted.first : null;
   }
 
   Team? get leadingTeam {
+    if (isNormalOkey) {
+      if (team1.totalScore > team2.totalScore) return team1;
+      if (team2.totalScore > team1.totalScore) return team2;
+      return null;
+    }
     if (team1.totalScore < team2.totalScore) return team1;
     if (team2.totalScore < team1.totalScore) return team2;
     return null;
   }
+
+  bool get isNormalOkey => gameMode == GameMode.normalOkey;
 
   bool get isAmericano =>
       gameMode == GameMode.americano || gameMode == GameMode.americanoSolo;

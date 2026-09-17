@@ -5,17 +5,23 @@ import '../theme/app_theme.dart';
 class TeamScoreBar extends StatelessWidget {
   final Team team1;
   final Team team2;
+  final bool isHigherBetter;
 
   const TeamScoreBar({
     super.key,
     required this.team1,
     required this.team2,
+    this.isHigherBetter = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final team1Leading = team1.totalScore < team2.totalScore;
-    final team2Leading = team2.totalScore < team1.totalScore;
+    final team1Leading = isHigherBetter
+        ? team1.totalScore > team2.totalScore
+        : team1.totalScore < team2.totalScore;
+    final team2Leading = isHigherBetter
+        ? team2.totalScore > team1.totalScore
+        : team2.totalScore < team1.totalScore;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),

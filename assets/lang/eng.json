@@ -10,6 +10,7 @@
     "no": "No",
     "pass": "Pass",
     "close": "Close",
+    "undo": "Undo",
     "continue": "Continue",
     "delete": "Delete",
     "success": "Success",
@@ -26,7 +27,7 @@
     "language": "Selected Language: ",
     "vibration": "Vibration",
     "sound_effects": "Sound Effects",
-    "telemetry": "Send Anonymous User Data",
+    "telemetry": "Send User Data",
     "toxic_nicknames": "Toxic Nicknames",
     "about": "About App",
     "import_export": "Import/Export Data",
@@ -113,10 +114,12 @@
     "who_finished": "Who Finished?",
     "how_finished": "How Finished?",
     "no_winner_desc": "Tiles ran out, nobody could finish. Everyone enters their remaining tile points.",
+    "no_winner_desc_classic": "Tiles ran out, nobody could finish. Everyone enters their remaining tile points.",
     "no_winner_saved": "Nobody finished — Remaining tile scores saved.",
     "points_with_win": "+1 🏆 Win",
     "teammate_badge": "Partner",
-    "teammate_no_penalty": "Teammate receives no penalty"
+    "teammate_no_penalty": "Teammate receives no penalty",
+    "table_banter": "Table Banter"
   },
   "new_game": {
     "title": "New Game",
@@ -141,7 +144,8 @@
     "mode_solo": "Solo",
     "mode_solo_desc": "4 individual • No teams",
     "desc_americano": "12 rounds • Individual",
-    "desc_101": "Classic • Team"
+    "desc_101": "Classic • Team",
+    "desc_normal_okey": "Classic"
   },
   "past_games": {
     "title": "Past Games",
@@ -204,7 +208,12 @@
     "americano_okey_atti": "Discarded Okey",
     "americano_yanlis_el_acti": "Wrong Hand Open",
     "americano_islek_atarak_bitti": "Finish with Misplay",
-    "americano_okey_atarak_bitti": "Finished with Okey"
+    "americano_okey_atarak_bitti": "Finished with Okey",
+    "americano_yanlis_bitti": "Wrong Finish",
+    "normal_okey_bitti": "Normal Finish",
+    "normal_okey_okey_atti": "Okey Finish",
+    "normal_okey_cift_bitti": "Pairs Finish",
+    "normal_okey_cift_ve_okey_bitti": "Pairs & Okey Finish"
   },
   "nicknames": {
     "early_start_1": "🃏 Here we go, let's see which fucking idiot gets his ass wrecked first",
@@ -308,6 +317,7 @@
     "round_winner_okey": "🃏🏆 {0} won this round by throwing Okey! (-100)",
     "finish_normal": "Normal Finish (-50)",
     "finish_okey": "Okey Finish (-100)",
+    "finish_wrong": "Wrong Finish (+100)",
     "teammate_badge": "Partner",
     "teammate_no_penalty": "Teammate receives no penalty",
     "ground_card": "Ground Card",
@@ -316,5 +326,15 @@
     "last_round": "Final round! 👑",
     "game_rules": "Americano Rules",
     "rules_text": "Each round requires opening a specific combination.\n\nGround card: You may take the top discard on your turn. Other players may draw a penalty card to take it (max 3 times).\n\nJoker = 50 pts \u2022 Misplay = 50 pts \u2022 Cheating = 50 pts"
+  },
+  "normal_okey": {
+    "title": "Classic Okey",
+    "mode_name": "Classic Okey",
+    "finish_options": "Finish Options",
+    "okey_finish": "Discard Okey (2 Pts)",
+    "cift_finish": "Pairs Finish (2 Pts)",
+    "both_multiplier": "Multiplied: Okey + Pairs (4 Pts)",
+    "base_point": "Normal Finish (1 Pt)",
+    "points_preview": "{0} receives {1} Points"
   }
 }

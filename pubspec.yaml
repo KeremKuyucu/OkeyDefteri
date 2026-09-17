@@ -2,7 +2,7 @@ name: okey_defteri
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 1.0.8+11
+version: 1.0.9+13
 
 environment:
   sdk: ^3.12.0-154.0.dev
@@ -30,13 +30,15 @@ dev_dependencies:
 
 flutter_launcher_icons:
   android: "ic_launcher"
-  ios: true
+  ios: false
   web:
     generate: true
     image_path: "assets/images/logo.png"
-    background_color: "#1E1E24"
-    theme_color: "#1E1E24"
+    background_color: "#0A1A0D"
+    theme_color: "#0A1A0D"
   image_path: "assets/images/logo.png"
+  adaptive_icon_background: "#0A1A0D"
+  adaptive_icon_foreground: "assets/images/logo.png"
 
 flutter:
   uses-material-design: true

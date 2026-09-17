@@ -7,6 +7,7 @@ import '../widgets/player_card.dart';
 import '../widgets/team_score_bar.dart';
 import '../widgets/score_input_dialog.dart';
 import '../widgets/ad_banner_widget.dart';
+import '../widgets/table_banter_bar.dart';
 import 'score_history_screen.dart';
 import 'stats_screen.dart';
 import '../services/settings_service.dart';
@@ -79,6 +80,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         context,
       ).showSnackBar(SnackBar(content: Text(Localization.t('game.finished'))));
       return;
+    }
+
+    if (_game.isNormalOkey) {
+      return _openNormalOkeyRoundEndDialog();
     }
 
     // Turu geçmeyi unuttun mu kontrolü
@@ -222,7 +227,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         SnackBar(
           content: Text(
             Localization.t('game.no_winner_saved'),
-            style: const TextStyle(fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
           ),
           backgroundColor: AppTheme.warningOrange,
           behavior: SnackBarBehavior.floating,
@@ -237,7 +245,150 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         SnackBar(
           content: Text(
             '${winner.name} ${finishType!.emoji} ${finishType.label}',
-            style: const TextStyle(fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: AppTheme.lightGreen,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+  }
+
+  /// Normal Okey tur sonu puan giriş dialogunu açar
+  Future<void> _openNormalOkeyRoundEndDialog([
+    Player? preselectedPlayer,
+  ]) async {
+    if (_game.isFinished) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(Localization.t('game.finished'))));
+      return;
+    }
+
+    if (_hasTurnEndingScoreInCurrentRound()) {
+      final shouldContinue = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: AppTheme.surfaceDark,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: AppTheme.accentGold,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  Localization.t('game.forgot_round_title'),
+                  style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            Localization.t('game.forgot_round_message'),
+            style: const TextStyle(color: AppTheme.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(
+                Localization.t('common.cancel'),
+                style: const TextStyle(color: AppTheme.textSecondary),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentGold,
+                foregroundColor: Colors.black,
+              ),
+              child: Text(Localization.t('game.forgot_round_continue')),
+            ),
+          ],
+        ),
+      );
+      if (shouldContinue != true) return;
+    }
+
+    if (!mounted) return;
+    AudioVibrationService.playClickSound();
+    AudioVibrationService.vibrateHeavy();
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _NormalOkeyRoundEndDialog(
+        game: _game,
+        initialWinnerId: preselectedPlayer?.id,
+      ),
+    );
+
+    if (!mounted || result == null) return;
+
+    final noWinner = result['noWinner'] == true;
+    final winnerId = result['winnerId'] as String?;
+    final scoreType = result['scoreType'] as ScoreType?;
+    final points = result['points'] as int? ?? 1;
+
+    final now = DateTime.now();
+    setState(() {
+      if (!noWinner && winnerId != null && scoreType != null) {
+        final winner = _game.allPlayers.firstWhere((p) => p.id == winnerId);
+        winner.scores.add(
+          ScoreEntry(
+            id: '${now.millisecondsSinceEpoch}_${winner.id}_win',
+            type: scoreType,
+            points: points,
+            timestamp: now,
+            roundNumber: _game.currentRound,
+          ),
+        );
+      }
+    });
+    await _saveGame();
+
+    if (!mounted) return;
+    if (noWinner || winnerId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            Localization.t('game.no_winner_saved'),
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: AppTheme.warningOrange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    } else {
+      final winner = _game.allPlayers.firstWhere((p) => p.id == winnerId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${winner.name} ${scoreType!.emoji} ${scoreType.label} (+$points)',
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
           ),
           backgroundColor: AppTheme.lightGreen,
           behavior: SnackBarBehavior.floating,
@@ -255,6 +406,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         context,
       ).showSnackBar(SnackBar(content: Text(Localization.t('game.finished'))));
       return;
+    }
+
+    if (_game.isNormalOkey) {
+      return _openNormalOkeyRoundEndDialog(player);
     }
 
     // Bu oyuncu için turu geçmeyi unuttun mu kontrolü
@@ -409,7 +564,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       SnackBar(
         content: Text(
           Localization.t('game.tour_start_info', args: [_game.currentRound]),
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
         ),
         backgroundColor: AppTheme.lightGreen,
         behavior: SnackBarBehavior.floating,
@@ -423,9 +581,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     AudioVibrationService.playClickSound();
     AudioVibrationService.vibrateHeavy();
 
-    AdService.showInterstitialAd(
-      onDismissed: _advanceRound,
-    );
+    AdService.showInterstitialAd(onDismissed: _advanceRound);
   }
 
   void _prevRound() {
@@ -474,7 +630,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 SnackBar(
                   content: Text(
                     Localization.t('game.round', args: [_game.currentRound]),
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                   backgroundColor: AppTheme.dangerRed,
                   behavior: SnackBarBehavior.floating,
@@ -551,8 +710,19 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             const SizedBox(height: 8),
 
             // Takım skorları
-            TeamScoreBar(team1: _game.team1, team2: _game.team2),
-            const SizedBox(height: 8),
+            TeamScoreBar(
+              team1: _game.team1,
+              team2: _game.team2,
+              isHigherBetter: _game.isNormalOkey,
+            ),
+            const SizedBox(height: 4),
+
+            // Canlı Masa Muhabbeti / Spiker Bandı
+            TableBanterBar(
+              players: _game.allPlayers,
+              roundNumber: _game.currentRound,
+            ),
+            const SizedBox(height: 4),
 
             // Oyun masası
             Expanded(child: _buildGameTable()),
@@ -585,7 +755,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             child: Column(
               children: [
                 Text(
-                  Localization.t('game.title'),
+                  _game.isNormalOkey
+                      ? Localization.t('normal_okey.title')
+                      : Localization.t('game.title'),
                   style: TextStyle(
                     color: AppTheme.accentGold,
                     fontSize: 20,
@@ -682,151 +854,146 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               fit: BoxFit.contain,
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Üst oyuncu (seat 0) - Takım 1 Oyuncu 1
-                  GestureDetector(
-                    onLongPress: () => _undoLastScore(_game.team1.player1),
-                    child: PlayerCard(
-                      player: _game.team1.player1,
-                      team: _game.team1,
-                      position: 0,
-                      nickname: _game.team1.player1.getNickname(
-                        _game.allPlayers,
-                        _game.currentRound,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Üst oyuncu (seat 0) - Takım 1 Oyuncu 1
+                    GestureDetector(
+                      onLongPress: () => _undoLastScore(_game.team1.player1),
+                      child: PlayerCard(
+                        player: _game.team1.player1,
+                        team: _game.team1,
+                        position: 0,
+                        isHigherScoreBetter: _game.isNormalOkey,
+                        hideCiftliToggle: _game.isNormalOkey,
+                        onTap: () => _openScoreDialog(_game.team1.player1),
+                        onToggleCiftli: () =>
+                            _toggleCiftli(_game.team1.player1),
                       ),
-                      onTap: () => _openScoreDialog(_game.team1.player1),
-                      onToggleCiftli: () => _toggleCiftli(_game.team1.player1),
                     ),
-                  ),
 
-                  const SizedBox(height: gap),
+                    const SizedBox(height: gap),
 
-                  // Orta Satır (Sol Oyuncu - Masa - Sağ Oyuncu)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Sol oyuncu (seat 3) - Takım 2 Oyuncu 2
-                      GestureDetector(
-                        onLongPress: () => _undoLastScore(_game.team2.player2),
-                        child: PlayerCard(
-                          player: _game.team2.player2,
-                          team: _game.team2,
-                          position: 3,
-                          nickname: _game.team2.player2.getNickname(
-                            _game.allPlayers,
-                            _game.currentRound,
+                    // Orta Satır (Sol Oyuncu - Masa - Sağ Oyuncu)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Sol oyuncu (seat 3) - Takım 2 Oyuncu 2
+                        GestureDetector(
+                          onLongPress: () =>
+                              _undoLastScore(_game.team2.player2),
+                          child: PlayerCard(
+                            player: _game.team2.player2,
+                            team: _game.team2,
+                            position: 3,
+                            isHigherScoreBetter: _game.isNormalOkey,
+                            hideCiftliToggle: _game.isNormalOkey,
+                            onTap: () => _openScoreDialog(_game.team2.player2),
+                            onToggleCiftli: () =>
+                                _toggleCiftli(_game.team2.player2),
                           ),
-                          onTap: () => _openScoreDialog(_game.team2.player2),
-                          onToggleCiftli: () =>
-                              _toggleCiftli(_game.team2.player2),
                         ),
-                      ),
 
-                      const SizedBox(width: gap),
+                        const SizedBox(width: gap),
 
-                      // Masa (ortadaki yeşil alan)
-                      GestureDetector(
-                        onTap: _openBulkRoundEndDialog,
-                        child: AnimatedBuilder(
-                          animation: _pulseAnimation,
-                          builder: (context, child) {
-                            return Container(
-                              width: tableSize,
-                              height: tableSize,
-                              decoration: BoxDecoration(
-                                gradient: AppTheme.tableGradient,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: AppTheme.accentGold.withValues(
-                                    alpha: 0.3,
-                                  ),
-                                  width: 2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppTheme.primaryGreen.withValues(
+                        // Masa (ortadaki yeşil alan)
+                        GestureDetector(
+                          onTap: _openBulkRoundEndDialog,
+                          child: AnimatedBuilder(
+                            animation: _pulseAnimation,
+                            builder: (context, child) {
+                              return Container(
+                                width: tableSize,
+                                height: tableSize,
+                                decoration: BoxDecoration(
+                                  gradient: AppTheme.tableGradient,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: AppTheme.accentGold.withValues(
                                       alpha: 0.3,
                                     ),
-                                    blurRadius: 24,
-                                    spreadRadius: 4,
+                                    width: 2,
                                   ),
-                                ],
-                              ),
-                              child: Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Text(
-                                      '🎴',
-                                      style: TextStyle(fontSize: 32),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      Localization.t(
-                                        'game.round',
-                                        args: [_game.currentRound],
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppTheme.primaryGreen.withValues(
+                                        alpha: 0.3,
                                       ),
-                                      style: TextStyle(
-                                        color: AppTheme.textPrimary.withValues(
-                                          alpha: 0.7,
-                                        ),
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                      blurRadius: 24,
+                                      spreadRadius: 4,
                                     ),
                                   ],
                                 ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(width: gap),
-
-                      // Sağ oyuncu (seat 1) - Takım 2 Oyuncu 1
-                      GestureDetector(
-                        onLongPress: () => _undoLastScore(_game.team2.player1),
-                        child: PlayerCard(
-                          player: _game.team2.player1,
-                          team: _game.team2,
-                          position: 1,
-                          nickname: _game.team2.player1.getNickname(
-                            _game.allPlayers,
-                            _game.currentRound,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text(
+                                        '🎴',
+                                        style: TextStyle(fontSize: 32),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        Localization.t(
+                                          'game.round',
+                                          args: [_game.currentRound],
+                                        ),
+                                        style: TextStyle(
+                                          color: AppTheme.textPrimary
+                                              .withValues(alpha: 0.7),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                          onTap: () => _openScoreDialog(_game.team2.player1),
-                          onToggleCiftli: () =>
-                              _toggleCiftli(_game.team2.player1),
                         ),
-                      ),
-                    ],
-                  ),
 
-                  const SizedBox(height: gap),
+                        const SizedBox(width: gap),
 
-                  // Alt oyuncu (seat 2) - Takım 1 Oyuncu 2
-                  GestureDetector(
-                    onLongPress: () => _undoLastScore(_game.team1.player2),
-                    child: PlayerCard(
-                      player: _game.team1.player2,
-                      team: _game.team1,
-                      position: 2,
-                      nickname: _game.team1.player2.getNickname(
-                        _game.allPlayers,
-                        _game.currentRound,
-                      ),
-                      onTap: () => _openScoreDialog(_game.team1.player2),
-                      onToggleCiftli: () => _toggleCiftli(_game.team1.player2),
+                        // Sağ oyuncu (seat 1) - Takım 2 Oyuncu 1
+                        GestureDetector(
+                          onLongPress: () =>
+                              _undoLastScore(_game.team2.player1),
+                          child: PlayerCard(
+                            player: _game.team2.player1,
+                            team: _game.team2,
+                            position: 1,
+                            isHigherScoreBetter: _game.isNormalOkey,
+                            hideCiftliToggle: _game.isNormalOkey,
+                            onTap: () => _openScoreDialog(_game.team2.player1),
+                            onToggleCiftli: () =>
+                                _toggleCiftli(_game.team2.player1),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+
+                    const SizedBox(height: gap),
+
+                    // Alt oyuncu (seat 2) - Takım 1 Oyuncu 2
+                    GestureDetector(
+                      onLongPress: () => _undoLastScore(_game.team1.player2),
+                      child: PlayerCard(
+                        player: _game.team1.player2,
+                        team: _game.team1,
+                        position: 2,
+                        isHigherScoreBetter: _game.isNormalOkey,
+                        hideCiftliToggle: _game.isNormalOkey,
+                        onTap: () => _openScoreDialog(_game.team1.player2),
+                        onToggleCiftli: () =>
+                            _toggleCiftli(_game.team1.player2),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
         );
       },
     );
@@ -944,6 +1111,586 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Normal Okey tur sonu bitirme dialogu
+class _NormalOkeyRoundEndDialog extends StatefulWidget {
+  final Game game;
+  final String? initialWinnerId;
+
+  const _NormalOkeyRoundEndDialog({required this.game, this.initialWinnerId});
+
+  @override
+  State<_NormalOkeyRoundEndDialog> createState() =>
+      _NormalOkeyRoundEndDialogState();
+}
+
+class _NormalOkeyRoundEndDialogState extends State<_NormalOkeyRoundEndDialog> {
+  bool _noWinner = false;
+  String? _winnerId;
+  bool _isOkey = false;
+  bool _isCift = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _winnerId = widget.initialWinnerId;
+  }
+
+  int get _calculatedPoints {
+    if (_isOkey && _isCift) {
+      return 4; // Çift ve Okey: 2 > 4 katlanır
+    } else if (_isOkey || _isCift) {
+      return 2; // Okey atma: 2, Çift bitme: 2
+    } else {
+      return 1; // Normal bitiş: 1
+    }
+  }
+
+  ScoreType get _calculatedType {
+    if (_isOkey && _isCift) {
+      return ScoreType.normalOkeyCiftVeOkeyBitti;
+    } else if (_isOkey) {
+      return ScoreType.normalOkeyAtarakBitti;
+    } else if (_isCift) {
+      return ScoreType.normalOkeyCiftBitti;
+    } else {
+      return ScoreType.normalOkeyBitti;
+    }
+  }
+
+  bool get _canSave {
+    if (_noWinner) return true;
+    return _winnerId != null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final winner = _winnerId != null
+        ? widget.game.allPlayers.firstWhere((p) => p.id == _winnerId)
+        : null;
+
+    return Dialog(
+      backgroundColor: AppTheme.surfaceDark,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 650),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Başlık
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.goldGradient,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text('🎴', style: TextStyle(fontSize: 20)),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${Localization.t('normal_okey.title')} — ${Localization.t('game.round', args: [widget.game.currentRound])}',
+                          style: const TextStyle(
+                            color: AppTheme.accentGold,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          Localization.t('game.end_game'),
+                          style: const TextStyle(
+                            color: AppTheme.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: AppTheme.textMuted),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Biri Bitirdi / Kimse Bitmedi Seçim Tab'i
+              Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceCard,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.lightGreen.withValues(alpha: 0.15),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _noWinner = false),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            gradient: !_noWinner ? AppTheme.goldGradient : null,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('🏆', style: TextStyle(fontSize: 14)),
+                              const SizedBox(width: 6),
+                              Text(
+                                Localization.t('game.round_winner_mode'),
+                                style: TextStyle(
+                                  color: !_noWinner
+                                      ? Colors.black
+                                      : AppTheme.textMuted,
+                                  fontWeight: !_noWinner
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() {
+                          _noWinner = true;
+                          _winnerId = null;
+                        }),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _noWinner
+                                ? AppTheme.warningOrange.withValues(alpha: 0.25)
+                                : null,
+                            borderRadius: BorderRadius.circular(10),
+                            border: _noWinner
+                                ? Border.all(
+                                    color: AppTheme.warningOrange.withValues(
+                                      alpha: 0.6,
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('🛑', style: TextStyle(fontSize: 14)),
+                              const SizedBox(width: 6),
+                              Text(
+                                Localization.t('game.round_no_winner_mode'),
+                                style: TextStyle(
+                                  color: _noWinner
+                                      ? AppTheme.warningOrange
+                                      : AppTheme.textMuted,
+                                  fontWeight: _noWinner
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              if (!_noWinner) ...[
+                // Kim bitirdi?
+                Text(
+                  Localization.t('game.who_finished'),
+                  style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: widget.game.allPlayers.map((p) {
+                    final isSelected = _winnerId == p.id;
+                    return GestureDetector(
+                      onTap: () => setState(() => _winnerId = p.id),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: isSelected ? AppTheme.goldGradient : null,
+                          color: isSelected ? null : AppTheme.surfaceCardLight,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppTheme.accentGold
+                                : AppTheme.textMuted.withValues(alpha: 0.25),
+                            width: isSelected ? 2 : 1,
+                          ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: AppTheme.accentGold.withValues(
+                                      alpha: 0.25,
+                                    ),
+                                    blurRadius: 8,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (isSelected)
+                              const Padding(
+                                padding: EdgeInsets.only(right: 6),
+                                child: Text(
+                                  '🏆',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                              ),
+                            Text(
+                              p.name,
+                              style: TextStyle(
+                                color: isSelected
+                                    ? Colors.black
+                                    : AppTheme.textPrimary,
+                                fontWeight: isSelected
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 20),
+
+                // Bitirme Şekli Seçenekleri
+                if (_winnerId != null) ...[
+                  Text(
+                    Localization.t('normal_okey.finish_options'),
+                    style: const TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      // Okey Atma
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _isOkey = !_isOkey),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: _isOkey
+                                  ? const LinearGradient(
+                                      colors: [
+                                        Color(0xFF9C27B0),
+                                        Color(0xFF673AB7),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    )
+                                  : null,
+                              color: _isOkey ? null : AppTheme.surfaceCardLight,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _isOkey
+                                    ? const Color(0xFFBA68C8)
+                                    : AppTheme.textMuted.withValues(
+                                        alpha: 0.25,
+                                      ),
+                                width: _isOkey ? 2 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Text(
+                                      '🃏',
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        Localization.t(
+                                          'normal_okey.okey_finish',
+                                        ),
+                                        style: TextStyle(
+                                          color: _isOkey
+                                              ? Colors.white
+                                              : AppTheme.textPrimary,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 12,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // Çift Bitme
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _isCift = !_isCift),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: _isCift
+                                  ? const LinearGradient(
+                                      colors: [
+                                        Color(0xFF2E7D32),
+                                        Color(0xFF1B5E20),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    )
+                                  : null,
+                              color: _isCift ? null : AppTheme.surfaceCardLight,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _isCift
+                                    ? AppTheme.lightGreen
+                                    : AppTheme.textMuted.withValues(
+                                        alpha: 0.25,
+                                      ),
+                                width: _isCift ? 2 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Text(
+                                      '👥',
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        Localization.t(
+                                          'normal_okey.cift_finish',
+                                        ),
+                                        style: TextStyle(
+                                          color: _isCift
+                                              ? Colors.white
+                                              : AppTheme.textPrimary,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 12,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Puan Önizleme Kartı
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      gradient: _isOkey && _isCift
+                          ? const LinearGradient(
+                              colors: [Color(0xFF4A148C), Color(0xFF1A237E)],
+                            )
+                          : null,
+                      color: _isOkey && _isCift ? null : AppTheme.surfaceCard,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: _isOkey && _isCift
+                            ? AppTheme.accentGold
+                            : AppTheme.lightGreen.withValues(alpha: 0.3),
+                        width: _isOkey && _isCift ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.goldGradient,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '+$_calculatedPoints',
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                Localization.t(
+                                  'normal_okey.points_preview',
+                                  args: [
+                                    winner?.name ?? '',
+                                    '+$_calculatedPoints',
+                                  ],
+                                ),
+                                style: const TextStyle(
+                                  color: AppTheme.textPrimary,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _isOkey && _isCift
+                                    ? Localization.t(
+                                        'normal_okey.both_multiplier',
+                                      )
+                                    : _isOkey
+                                    ? Localization.t('normal_okey.okey_finish')
+                                    : _isCift
+                                    ? Localization.t('normal_okey.cift_finish')
+                                    : Localization.t('normal_okey.base_point'),
+                                style: TextStyle(
+                                  color: _isOkey && _isCift
+                                      ? AppTheme.accentGold
+                                      : AppTheme.textMuted,
+                                  fontSize: 11,
+                                  fontWeight: _isOkey && _isCift
+                                      ? FontWeight.w700
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ] else ...[
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warningOrange.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.warningOrange.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        color: AppTheme.warningOrange,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          Localization.t('game.no_winner_desc_classic'),
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+
+              // Kaydet Butonu
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _canSave
+                      ? () => Navigator.pop(context, {
+                          'noWinner': _noWinner,
+                          'winnerId': _winnerId,
+                          'scoreType': _calculatedType,
+                          'points': _calculatedPoints,
+                        })
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _canSave
+                        ? AppTheme.lightGreen
+                        : AppTheme.surfaceCardLight,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: Text(
+                    Localization.t('common.save'),
+                    style: TextStyle(
+                      color: _canSave ? Colors.white : AppTheme.textMuted,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1088,8 +1835,12 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                               Text(
                                 Localization.t('game.round_winner_mode'),
                                 style: TextStyle(
-                                  color: !_noWinner ? Colors.black : AppTheme.textMuted,
-                                  fontWeight: !_noWinner ? FontWeight.w800 : FontWeight.w600,
+                                  color: !_noWinner
+                                      ? Colors.black
+                                      : AppTheme.textMuted,
+                                  fontWeight: !_noWinner
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
                                   fontSize: 12,
                                 ),
                               ),
@@ -1113,7 +1864,9 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                             borderRadius: BorderRadius.circular(10),
                             border: _noWinner
                                 ? Border.all(
-                                    color: AppTheme.warningOrange.withValues(alpha: 0.6),
+                                    color: AppTheme.warningOrange.withValues(
+                                      alpha: 0.6,
+                                    ),
                                   )
                                 : null,
                           ),
@@ -1125,8 +1878,12 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                               Text(
                                 Localization.t('game.round_no_winner_mode'),
                                 style: TextStyle(
-                                  color: _noWinner ? AppTheme.warningOrange : AppTheme.textMuted,
-                                  fontWeight: _noWinner ? FontWeight.w800 : FontWeight.w600,
+                                  color: _noWinner
+                                      ? AppTheme.warningOrange
+                                      : AppTheme.textMuted,
+                                  fontWeight: _noWinner
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
                                   fontSize: 12,
                                 ),
                               ),
@@ -1233,12 +1990,19 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline, color: AppTheme.warningOrange, size: 18),
+                      const Icon(
+                        Icons.info_outline,
+                        color: AppTheme.warningOrange,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           Localization.t('game.no_winner_desc'),
-                          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 11,
+                          ),
                         ),
                       ),
                     ],
@@ -1277,8 +2041,12 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                               width: 32,
                               height: 32,
                               decoration: BoxDecoration(
-                                gradient: isWinner ? AppTheme.goldGradient : null,
-                                color: isWinner ? null : AppTheme.surfaceCardLight,
+                                gradient: isWinner
+                                    ? AppTheme.goldGradient
+                                    : null,
+                                color: isWinner
+                                    ? null
+                                    : AppTheme.surfaceCardLight,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Center(
@@ -1307,7 +2075,9 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                                     child: Text(
                                       p.name,
                                       style: TextStyle(
-                                        color: isWinner ? color : AppTheme.textPrimary,
+                                        color: isWinner
+                                            ? color
+                                            : AppTheme.textPrimary,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -1320,10 +2090,14 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                                         vertical: 2,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: AppTheme.accentGold.withValues(alpha: 0.2),
+                                        color: AppTheme.accentGold.withValues(
+                                          alpha: 0.2,
+                                        ),
                                         borderRadius: BorderRadius.circular(6),
                                         border: Border.all(
-                                          color: AppTheme.accentGold.withValues(alpha: 0.5),
+                                          color: AppTheme.accentGold.withValues(
+                                            alpha: 0.5,
+                                          ),
                                         ),
                                       ),
                                       child: const Text(
@@ -1344,10 +2118,14 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                                         vertical: 2,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: AppTheme.lightGreen.withValues(alpha: 0.15),
+                                        color: AppTheme.lightGreen.withValues(
+                                          alpha: 0.15,
+                                        ),
                                         borderRadius: BorderRadius.circular(6),
                                         border: Border.all(
-                                          color: AppTheme.lightGreen.withValues(alpha: 0.3),
+                                          color: AppTheme.lightGreen.withValues(
+                                            alpha: 0.3,
+                                          ),
                                         ),
                                       ),
                                       child: Text(
@@ -1375,12 +2153,18 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                               if (isTeammate)
                                 Container(
                                   width: 70,
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.lightGreen.withValues(alpha: 0.12),
+                                    color: AppTheme.lightGreen.withValues(
+                                      alpha: 0.12,
+                                    ),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: AppTheme.lightGreen.withValues(alpha: 0.3),
+                                      color: AppTheme.lightGreen.withValues(
+                                        alpha: 0.3,
+                                      ),
                                     ),
                                   ),
                                   child: const Center(
@@ -1411,10 +2195,15 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                                           vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: AppTheme.dangerRed.withValues(alpha: 0.15),
-                                          borderRadius: BorderRadius.circular(6),
+                                          color: AppTheme.dangerRed.withValues(
+                                            alpha: 0.15,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                           border: Border.all(
-                                            color: AppTheme.dangerRed.withValues(alpha: 0.3),
+                                            color: AppTheme.dangerRed
+                                                .withValues(alpha: 0.3),
                                           ),
                                         ),
                                         child: const Text(
@@ -1445,10 +2234,11 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                                         color: AppTheme.textMuted,
                                       ),
                                       isDense: true,
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 8,
-                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 8,
+                                          ),
                                       filled: true,
                                       fillColor: AppTheme.surfaceCardLight,
                                       border: OutlineInputBorder(
@@ -1479,7 +2269,10 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                             final scores = <String, int>{};
                             for (final p in widget.game.allPlayers) {
                               scores[p.id] =
-                                  int.tryParse(_controllers[p.id]?.text ?? '') ?? 0;
+                                  int.tryParse(
+                                    _controllers[p.id]?.text ?? '',
+                                  ) ??
+                                  0;
                             }
                             Navigator.pop(context, {
                               'noWinner': true,
@@ -1493,7 +2286,10 @@ class _BulkRoundEndDialogState extends State<_BulkRoundEndDialog> {
                                 scores[p.id] = 0;
                               } else {
                                 scores[p.id] =
-                                    int.tryParse(_controllers[p.id]?.text ?? '') ?? 0;
+                                    int.tryParse(
+                                      _controllers[p.id]?.text ?? '',
+                                    ) ??
+                                    0;
                               }
                             }
                             Navigator.pop(context, {

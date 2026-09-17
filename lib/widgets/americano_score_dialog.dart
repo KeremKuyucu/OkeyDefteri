@@ -4,6 +4,8 @@ import '../models/game_models.dart';
 import '../theme/app_theme.dart';
 import '../services/localization_service.dart';
 
+enum AmericanoFinishOption { normal, okey, wrong }
+
 /// Americano tur sonu puan giriş dialogu.
 /// Kazanan seçilir, diğer oyuncular için kart değerleri ve cezalar girilir.
 class AmericanoRoundScoreDialog extends StatefulWidget {
@@ -29,7 +31,7 @@ class _AmericanoRoundScoreDialogState
     extends State<AmericanoRoundScoreDialog> {
   bool _noWinner = false;
   String? _winnerId;
-  bool _isOkeyFinish = false;
+  AmericanoFinishOption _finishOption = AmericanoFinishOption.normal;
   final Map<String, TextEditingController> _cardControllers = {};
   final Map<String, bool> _islekFlags = {};
   final Map<String, bool> _hileFlags = {};
@@ -41,7 +43,7 @@ class _AmericanoRoundScoreDialogState
   @override
   void initState() {
     super.initState();
-    _isOkeyFinish = false;
+    _finishOption = AmericanoFinishOption.normal;
     for (final p in widget.allPlayers) {
       _cardControllers[p.id] = TextEditingController();
       _islekFlags[p.id] = false;
@@ -57,6 +59,7 @@ class _AmericanoRoundScoreDialogState
     if (widget.game.isAmericanoSolo) return false;
     if (_noWinner || _winnerId == null) return false;
     if (_winnerId == p.id) return false;
+    if (_finishOption == AmericanoFinishOption.wrong) return false;
     final winner = widget.allPlayers.firstWhere(
       (pl) => pl.id == _winnerId,
     );
@@ -80,15 +83,31 @@ class _AmericanoRoundScoreDialogState
       final entries = <ScoreEntry>[];
 
       if (!_noWinner && p.id == _winnerId) {
-        entries.add(ScoreEntry(
-          id: '${now.millisecondsSinceEpoch}_${p.id}_win',
-          type: _isOkeyFinish
-              ? ScoreType.americanoOkeyAtarakBitti
-              : ScoreType.americanoKazandi,
-          points: _isOkeyFinish ? -100 : -50,
-          timestamp: now,
-          roundNumber: widget.roundNumber,
-        ));
+        if (_finishOption == AmericanoFinishOption.wrong) {
+          entries.add(ScoreEntry(
+            id: '${now.millisecondsSinceEpoch}_${p.id}_wrong',
+            type: ScoreType.americanoYanlisBitti,
+            points: 100,
+            timestamp: now,
+            roundNumber: widget.roundNumber,
+          ));
+        } else if (_finishOption == AmericanoFinishOption.okey) {
+          entries.add(ScoreEntry(
+            id: '${now.millisecondsSinceEpoch}_${p.id}_win',
+            type: ScoreType.americanoOkeyAtarakBitti,
+            points: -100,
+            timestamp: now,
+            roundNumber: widget.roundNumber,
+          ));
+        } else {
+          entries.add(ScoreEntry(
+            id: '${now.millisecondsSinceEpoch}_${p.id}_win',
+            type: ScoreType.americanoKazandi,
+            points: -50,
+            timestamp: now,
+            roundNumber: widget.roundNumber,
+          ));
+        }
       } else if (!_noWinner && _isTeammateOfWinner(p)) {
         // Eşli oyunlarda takım arkadaşına elde kalan kart cezası yazılmaz (otomatik 0 puan).
       } else {
@@ -381,22 +400,23 @@ class _AmericanoRoundScoreDialogState
                     const SizedBox(height: 12),
                     Row(
                       children: [
+                        // Normal (-50)
                         Expanded(
                           child: GestureDetector(
-                            onTap: () => setState(() => _isOkeyFinish = false),
+                            onTap: () => setState(() => _finishOption = AmericanoFinishOption.normal),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 150),
                               padding: const EdgeInsets.symmetric(vertical: 9),
                               decoration: BoxDecoration(
-                                gradient: !_isOkeyFinish
+                                gradient: _finishOption == AmericanoFinishOption.normal
                                     ? AppTheme.goldGradient
                                     : null,
-                                color: !_isOkeyFinish
+                                color: _finishOption == AmericanoFinishOption.normal
                                     ? null
                                     : AppTheme.surfaceCardLight,
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color: !_isOkeyFinish
+                                  color: _finishOption == AmericanoFinishOption.normal
                                       ? AppTheme.accentGold
                                       : AppTheme.textMuted.withValues(alpha: 0.2),
                                 ),
@@ -404,18 +424,21 @@ class _AmericanoRoundScoreDialogState
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Text('🏆', style: TextStyle(fontSize: 13)),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    Localization.t('americano.finish_normal'),
-                                    style: TextStyle(
-                                      color: !_isOkeyFinish
-                                          ? Colors.black
-                                          : AppTheme.textMuted,
-                                      fontSize: 12,
-                                      fontWeight: !_isOkeyFinish
-                                          ? FontWeight.w800
-                                          : FontWeight.w500,
+                                  const Text('🏆', style: TextStyle(fontSize: 12)),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      Localization.t('americano.finish_normal'),
+                                      style: TextStyle(
+                                        color: _finishOption == AmericanoFinishOption.normal
+                                            ? Colors.black
+                                            : AppTheme.textMuted,
+                                        fontSize: 11,
+                                        fontWeight: _finishOption == AmericanoFinishOption.normal
+                                            ? FontWeight.w800
+                                            : FontWeight.w500,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -423,27 +446,28 @@ class _AmericanoRoundScoreDialogState
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
+                        // Okey (-100)
                         Expanded(
                           child: GestureDetector(
-                            onTap: () => setState(() => _isOkeyFinish = true),
+                            onTap: () => setState(() => _finishOption = AmericanoFinishOption.okey),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 150),
                               padding: const EdgeInsets.symmetric(vertical: 9),
                               decoration: BoxDecoration(
-                                gradient: _isOkeyFinish
+                                gradient: _finishOption == AmericanoFinishOption.okey
                                     ? const LinearGradient(
                                         colors: [Color(0xFF9C27B0), Color(0xFF673AB7)],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                       )
                                     : null,
-                                color: _isOkeyFinish
+                                color: _finishOption == AmericanoFinishOption.okey
                                     ? null
                                     : AppTheme.surfaceCardLight,
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color: _isOkeyFinish
+                                  color: _finishOption == AmericanoFinishOption.okey
                                       ? const Color(0xFFBA68C8)
                                       : AppTheme.textMuted.withValues(alpha: 0.2),
                                 ),
@@ -451,18 +475,72 @@ class _AmericanoRoundScoreDialogState
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Text('🃏', style: TextStyle(fontSize: 13)),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    Localization.t('americano.finish_okey'),
-                                    style: TextStyle(
-                                      color: _isOkeyFinish
-                                          ? Colors.white
-                                          : AppTheme.textMuted,
-                                      fontSize: 12,
-                                      fontWeight: _isOkeyFinish
-                                          ? FontWeight.w800
-                                          : FontWeight.w500,
+                                  const Text('🃏', style: TextStyle(fontSize: 12)),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      Localization.t('americano.finish_okey'),
+                                      style: TextStyle(
+                                        color: _finishOption == AmericanoFinishOption.okey
+                                            ? Colors.white
+                                            : AppTheme.textMuted,
+                                        fontSize: 11,
+                                        fontWeight: _finishOption == AmericanoFinishOption.okey
+                                            ? FontWeight.w800
+                                            : FontWeight.w500,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        // Yanlış Bitti (+100)
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _finishOption = AmericanoFinishOption.wrong),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              decoration: BoxDecoration(
+                                gradient: _finishOption == AmericanoFinishOption.wrong
+                                    ? const LinearGradient(
+                                        colors: [Color(0xFFE53935), Color(0xFFC62828)],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      )
+                                    : null,
+                                color: _finishOption == AmericanoFinishOption.wrong
+                                    ? null
+                                    : AppTheme.surfaceCardLight,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: _finishOption == AmericanoFinishOption.wrong
+                                      ? const Color(0xFFEF5350)
+                                      : AppTheme.textMuted.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text('❌', style: TextStyle(fontSize: 12)),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      Localization.t('americano.finish_wrong'),
+                                      style: TextStyle(
+                                        color: _finishOption == AmericanoFinishOption.wrong
+                                            ? Colors.white
+                                            : AppTheme.textMuted,
+                                        fontSize: 11,
+                                        fontWeight: _finishOption == AmericanoFinishOption.wrong
+                                            ? FontWeight.w800
+                                            : FontWeight.w500,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -560,7 +638,11 @@ class _AmericanoRoundScoreDialogState
               children: [
                 Text(
                   isWinner
-                      ? (_isOkeyFinish ? '🃏🏆 ' : '🏆 ')
+                      ? (_finishOption == AmericanoFinishOption.wrong
+                          ? '❌ '
+                          : _finishOption == AmericanoFinishOption.okey
+                              ? '🃏🏆 '
+                              : '🏆 ')
                       : isTeammate
                           ? '🤝 '
                           : '🃏 ',
@@ -590,17 +672,25 @@ class _AmericanoRoundScoreDialogState
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: _isOkeyFinish
-                                ? const Color(0xFF7E57C2).withValues(alpha: 0.2)
-                                : AppTheme.accentGold.withValues(alpha: 0.2),
+                            color: _finishOption == AmericanoFinishOption.wrong
+                                ? AppTheme.dangerRed.withValues(alpha: 0.2)
+                                : _finishOption == AmericanoFinishOption.okey
+                                    ? const Color(0xFF7E57C2).withValues(alpha: 0.2)
+                                    : AppTheme.accentGold.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            _isOkeyFinish ? '-100 puan' : '-50 puan',
+                            _finishOption == AmericanoFinishOption.wrong
+                                ? '+100 puan'
+                                : _finishOption == AmericanoFinishOption.okey
+                                    ? '-100 puan'
+                                    : '-50 puan',
                             style: TextStyle(
-                              color: _isOkeyFinish
-                                  ? const Color(0xFFB39DDB)
-                                  : AppTheme.accentGold,
+                              color: _finishOption == AmericanoFinishOption.wrong
+                                  ? AppTheme.dangerRed
+                                  : _finishOption == AmericanoFinishOption.okey
+                                      ? const Color(0xFFB39DDB)
+                                      : AppTheme.accentGold,
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
                             ),

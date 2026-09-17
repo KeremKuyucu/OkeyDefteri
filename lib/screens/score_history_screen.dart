@@ -15,9 +15,21 @@ class ScoreHistoryScreen extends StatefulWidget {
 class _ScoreHistoryScreenState extends State<ScoreHistoryScreen> {
   void _deleteScore(Player player, ScoreEntry score) {
     if (widget.game.isFinished) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(Localization.t('game.finished'))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            Localization.t('game.finished'),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
       return;
     }
     showDialog(

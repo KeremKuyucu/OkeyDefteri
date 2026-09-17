@@ -147,5 +147,57 @@ void main() {
     final p1NickRound4 = p1.getNickname(players, 4);
     expect(p1NickRound4, isNotEmpty);
   });
+
+  test('Americano wrong finish gives +100 points', () {
+    expect(ScoreType.americanoYanlisBitti.defaultPoints, equals(100));
+    expect(ScoreType.americanoYanlisBitti.isFinishType, isTrue);
+    expect(ScoreType.americanoYanlisBitti.isAmericanoPenalty, isTrue);
+  });
+
+  test('Normal Okey point calculation and leading player/team', () {
+    expect(ScoreType.normalOkeyBitti.defaultPoints, equals(1));
+    expect(ScoreType.normalOkeyAtarakBitti.defaultPoints, equals(2));
+    expect(ScoreType.normalOkeyCiftBitti.defaultPoints, equals(2));
+    expect(ScoreType.normalOkeyCiftVeOkeyBitti.defaultPoints, equals(4));
+
+    final p1 = Player(id: 'p1', name: 'P1', seatIndex: 0);
+    final p2 = Player(id: 'p2', name: 'P2', seatIndex: 1);
+    final p3 = Player(id: 'p3', name: 'P3', seatIndex: 2);
+    final p4 = Player(id: 'p4', name: 'P4', seatIndex: 3);
+    final team1 = Team(id: 't1', name: 'Team 1', player1: p1, player2: p3);
+    final team2 = Team(id: 't2', name: 'Team 2', player1: p2, player2: p4);
+
+    final normalGame = Game(
+      id: 'g_normal',
+      createdAt: DateTime.now(),
+      team1: team1,
+      team2: team2,
+      gameMode: GameMode.normalOkey,
+    );
+
+    expect(normalGame.isNormalOkey, isTrue);
+
+    // P1 wins with double + okey (4 points)
+    p1.scores.add(ScoreEntry(
+      id: 's1',
+      type: ScoreType.normalOkeyCiftVeOkeyBitti,
+      points: 4,
+      timestamp: DateTime.now(),
+      roundNumber: 1,
+    ));
+
+    // P2 wins normal (1 point)
+    p2.scores.add(ScoreEntry(
+      id: 's2',
+      type: ScoreType.normalOkeyBitti,
+      points: 1,
+      timestamp: DateTime.now(),
+      roundNumber: 2,
+    ));
+
+    // In Normal Okey, highest score leads!
+    expect(normalGame.leadingPlayer?.id, equals('p1'));
+    expect(normalGame.leadingTeam?.id, equals('t1'));
+  });
 }
 
