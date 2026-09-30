@@ -44,9 +44,6 @@ Each player earns a context-aware nickname that changes every round based on the
 - Browse, resume, or delete past games from the Past Games screen.
 - Full data import/export as JSON for backup or migration.
 
-### 🔔 Update Checker
-- On launch the app checks the latest GitHub Release (`KeremKuyucu/okey-defteri-flutter`) and prompts the user to update if a newer version is available.
-
 ### 📡 Anonymous Telemetry
 - Optional daily ping (UUID + timestamp) to track app usage count. Contains no personal data and can be disabled in Settings.
 
@@ -79,8 +76,7 @@ lib/
 │   ├── settings_service.dart          # User preferences (vibration, sound, language, toxic nicknames)
 │   ├── storage_service.dart           # Local game persistence (SharedPreferences)
 │   ├── localization_service.dart      # JSON-based i18n engine (eng / tur)
-│   ├── logging_service.dart           # Anonymous daily telemetry ping
-│   └── update_checker_service.dart    # GitHub Release version checker
+│   └── logging_service.dart           # Anonymous daily telemetry ping
 ├── theme/
 │   └── app_theme.dart                 # Colors, gradients, text styles
 ├── screens/
@@ -136,7 +132,7 @@ flutter run
 
 ## 📦 Releases
 
-Release notes for each version are available as `RELEASE_X.X.X.md` files in the project root.
+Releases are automatically built and published to GitHub Releases and Google Play Console via automated GitHub Actions CI/CD workflows upon pushing a version tag (e.g. `v1.0.9`). Release notes are dynamically generated using Gemini API.
 
 ## 📄 License
 

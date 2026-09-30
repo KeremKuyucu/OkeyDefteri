@@ -13,7 +13,6 @@ import 'americano_game_screen.dart';
 import '../widgets/developer_info.dart';
 import '../services/settings_service.dart';
 import '../services/localization_service.dart';
-import '../services/update_checker_service.dart';
 import '../main.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -51,7 +50,6 @@ class _HomeScreenState extends State<HomeScreen>
     );
     _animController.forward();
     _loadData();
-    _checkForUpdates();
     _authSub = AuthService.authStateChanges.listen((data) {
       if (data.event == AuthChangeEvent.signedIn) {
         _autoSyncOnSignIn();
@@ -60,14 +58,6 @@ class _HomeScreenState extends State<HomeScreen>
           _loadData();
           setState(() {});
         }
-      }
-    });
-  }
-
-  void _checkForUpdates() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        UpdateService.check(context);
       }
     });
   }

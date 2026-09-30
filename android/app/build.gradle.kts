@@ -8,19 +8,22 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Keystore configuration (Supports Vault path, relative path, and legacy path)
+// Keystore configuration (Priority order):
+//   1. android/key.properties          – CI/CD (written by GitHub Actions workflow)
+//   2. ../../imza-bilgileri/key.properties – Local vault (relative to android/)
+//   3. Absolute fallback for local development
 val possibleKeyFiles = listOf(
+    rootProject.file("key.properties"),
     rootProject.projectDir.parentFile.parentFile.resolve("imza-bilgileri/key.properties"),
-    file("C:\\Users\\Kerem\\Projects\\imza-bilgileri\\key.properties")
+    file("C:\\Users\\kerem\\Projects\\imza-bilgileri\\key.properties")
 )
-val keystorePropertiesFile = possibleKeyFiles.firstOrNull { it.exists() } ?: file("C:\\Users\\Kerem\\Projects\\imza-bilgileri\\key.properties")
+val keystorePropertiesFile = possibleKeyFiles.firstOrNull { it.exists() } ?: file("C:\\Users\\kerem\\Projects\\imza-bilgileri\\key.properties")
 val keystoreProperties = Properties()
-var hasValidKeystore = false
-
-if (keystorePropertiesFile.exists()) {
+val hasValidKeystore = if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-    hasValidKeystore = keystoreProperties.getProperty("storeFile") != null && 
-                       keystoreProperties.getProperty("storeFile") != ""
+    !keystoreProperties.getProperty("storeFile").isNullOrEmpty()
+} else {
+    false
 }
 
 android {
@@ -50,7 +53,12 @@ android {
             create("release") {
                 val configuredStore = keystoreProperties.getProperty("storeFile")
                 val storeF = file(configuredStore)
-                storeFile = if (storeF.exists()) storeF else keystorePropertiesFile.parentFile.resolve("ksk.jks")
+                val storeInKeystoreDir = keystorePropertiesFile.parentFile.resolve(configuredStore)
+                storeFile = when {
+                    storeF.exists() -> storeF
+                    storeInKeystoreDir.exists() -> storeInKeystoreDir
+                    else -> keystorePropertiesFile.parentFile.resolve("ksk.jks")
+                }
                 storePassword = keystoreProperties.getProperty("storePassword")
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")

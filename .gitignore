@@ -54,3 +54,7 @@ app.*.map.json
 screenshots/
 __pycache__/
 .vercel_backup/
+RELEASE_*.md
+/tmp/*.json
+android/key.properties
+android/app/keystore.jks

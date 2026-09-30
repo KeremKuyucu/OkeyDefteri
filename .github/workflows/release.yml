@@ -1,0 +1,314 @@
+# ============================================================
+# Okey Defteri – GitHub Actions Release Pipeline
+# ============================================================
+# Triggers:
+#   - Push of a version tag (v1.x.x)
+#   - Manual dispatch (workflow_dispatch)
+#
+# Jobs:
+#   android  – APK (split-per-abi) + AAB build & sign (ubuntu-latest)
+#   web      – Flutter web build + Vercel deploy (ubuntu-latest)
+#   release  – GitHub Release + Play Store upload (ubuntu-latest)
+#              runs after android and web jobs succeed
+# ============================================================
+
+name: Okey Defteri Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+  workflow_dispatch:
+    inputs:
+      play_track:
+        description: 'Play Store track'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      upload_to_play:
+        description: 'Upload AAB to Play Store?'
+        required: true
+        default: 'true'
+        type: boolean
+      deploy_to_vercel:
+        description: 'Deploy Web build to Vercel?'
+        required: true
+        default: 'true'
+        type: boolean
+      create_github_release:
+        description: 'Create / update GitHub Release?'
+        required: true
+        default: 'true'
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_CHANNEL: stable
+  PACKAGE_NAME: com.keremkuyucu.okey_defteri
+
+jobs:
+  # ============================================================
+  # JOB: android
+  # ============================================================
+  android:
+    name: Android (APK + AAB)
+    runs-on: ubuntu-latest
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      version_code: ${{ steps.version.outputs.version_code }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//' | tr -d '[:space:]')
+          VERSION_CODE=$(grep '^version:' pubspec.yaml | sed 's/.*+//' | tr -d '[:space:]')
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "version_code=${VERSION_CODE}" >> "$GITHUB_OUTPUT"
+          echo "Okey Defteri version: ${VERSION}+${VERSION_CODE}"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+          cache-key: flutter-${{ env.FLUTTER_CHANNEL }}-${{ hashFiles('pubspec.lock') }}
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEY_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 --decode > android/app/keystore.jks
+
+          printf 'storeFile=../app/keystore.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > android/key.properties
+
+          echo "Keystore configured."
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build release APK (split-per-abi)
+        run: flutter build apk --release --split-per-abi
+
+      - name: Build release AAB
+        run: flutter build appbundle --release
+
+      - name: Remove keystore and key.properties
+        if: always()
+        run: |
+          rm -f android/app/keystore.jks
+          rm -f android/key.properties
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-${{ steps.version.outputs.version }}
+          path: build/app/outputs/apk/release/*.apk
+          retention-days: 30
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab-${{ steps.version.outputs.version }}
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+  # ============================================================
+  # JOB: web
+  # ============================================================
+  web:
+    name: Web (Flutter → Vercel)
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'push' ||
+      github.event.inputs.deploy_to_vercel == 'true'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+          cache-key: flutter-${{ env.FLUTTER_CHANNEL }}-${{ hashFiles('pubspec.lock') }}
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build Flutter web (release)
+        run: flutter build web --release
+
+      - name: Deploy to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          mkdir -p build/web/.vercel
+          cp web/.vercel/project.json build/web/.vercel/project.json
+          npx --yes vercel deploy ./build/web --prod --yes --token "$VERCEL_TOKEN"
+
+  # ============================================================
+  # JOB: release
+  # ============================================================
+  release:
+    name: GitHub Release & Play Store
+    runs-on: ubuntu-latest
+    needs: [android]
+    if: >
+      github.event_name == 'push' ||
+      github.event.inputs.create_github_release == 'true' ||
+      github.event.inputs.upload_to_play == 'true'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate release notes (Gemini API)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          VERSION="${{ needs.android.outputs.version }}"
+          NOTES_FILE="RELEASE_${VERSION}.md"
+          PLAY_NOTES="RELEASE_PLAY_STORE_${VERSION}.md"
+
+          if [ -f "$NOTES_FILE" ] && [ -f "$PLAY_NOTES" ]; then
+            echo "Release notes already exist in repository: $NOTES_FILE and $PLAY_NOTES"
+          elif [ -n "$GEMINI_API_KEY" ]; then
+            echo "Release notes missing or incomplete. Generating automatically with Gemini API for v${VERSION}..."
+            python scripts/generate_release_notes.py --engine gemini --version "$VERSION"
+          else
+            echo "GEMINI_API_KEY not configured and release notes not present; using standard release info."
+          fi
+
+      - name: Determine release metadata
+        id: meta
+        run: |
+          VERSION="${{ needs.android.outputs.version }}"
+          TAG="v${VERSION}"
+          TITLE="Okey Defteri v${VERSION}"
+          NOTES_FILE="RELEASE_${VERSION}.md"
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "title=${TITLE}" >> "$GITHUB_OUTPUT"
+          echo "notes_file=${NOTES_FILE}" >> "$GITHUB_OUTPUT"
+
+          if [ -f "$NOTES_FILE" ]; then
+            echo "has_notes=true" >> "$GITHUB_OUTPUT"
+            echo "Found release notes: $NOTES_FILE"
+          else
+            echo "has_notes=false" >> "$GITHUB_OUTPUT"
+            echo "No release notes file found for $NOTES_FILE, using generic description."
+          fi
+
+      - name: Download Android APK artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk-${{ needs.android.outputs.version }}
+          path: release-assets/
+
+      - name: List release assets
+        run: ls -lh release-assets/
+
+      - name: Create GitHub Release
+        if: >
+          github.event_name == 'push' ||
+          github.event.inputs.create_github_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.title }}
+          body_path: ${{ steps.meta.outputs.has_notes == 'true' && steps.meta.outputs.notes_file || '' }}
+          body: ${{ steps.meta.outputs.has_notes != 'true' && format('Okey Defteri {0} – automated release.', steps.meta.outputs.tag) || '' }}
+          files: release-assets/*.apk
+          draft: false
+          prerelease: false
+          generate_release_notes: ${{ steps.meta.outputs.has_notes != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Download AAB artifact
+        if: >
+          github.event_name == 'push' ||
+          github.event.inputs.upload_to_play == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: android-aab-${{ needs.android.outputs.version }}
+          path: play-assets/
+
+      - name: Install Google API Python libraries
+        if: >
+          github.event_name == 'push' ||
+          github.event.inputs.upload_to_play == 'true'
+        run: pip install google-api-python-client google-auth
+
+      - name: Write Play Store service account JSON
+        if: >
+          github.event_name == 'push' ||
+          github.event.inputs.upload_to_play == 'true'
+        env:
+          SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          printf '%s' "$SERVICE_ACCOUNT_JSON" > /tmp/play-service-account.json
+          echo "Service account JSON written."
+
+      - name: Upload AAB to Play Store
+        if: >
+          github.event_name == 'push' ||
+          github.event.inputs.upload_to_play == 'true'
+        run: |
+          VERSION="${{ needs.android.outputs.version }}"
+          TRACK="${{ github.event.inputs.play_track || 'production' }}"
+          NOTES_FILE="RELEASE_PLAY_STORE_${VERSION}.md"
+          NOTES_ARG=""
+          if [ -f "$NOTES_FILE" ]; then
+            NOTES_ARG="--release-notes $NOTES_FILE"
+            echo "Using Play Store release notes: $NOTES_FILE"
+          fi
+
+          python scripts/upload_play_store.py \
+            --aab play-assets/app-release.aab \
+            --service-account /tmp/play-service-account.json \
+            --package-name ${{ env.PACKAGE_NAME }} \
+            --track "$TRACK" \
+            --status completed \
+            $NOTES_ARG
+
+      - name: Remove service account JSON
+        if: always()
+        run: rm -f /tmp/play-service-account.json
