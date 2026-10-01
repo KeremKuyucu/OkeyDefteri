@@ -52,12 +52,12 @@ void main() {
 
       // Create mock game 2: Ali & Veli vs Ayse & Fatma again
       // Team 2 wins this time (Ayse finishes with normal finish)
-      final p1_g2 = Player(id: 'p1', name: 'Ali', seatIndex: 0);
-      final p2_g2 = Player(id: 'p2', name: 'Veli', seatIndex: 2);
-      final p3_g2 = Player(id: 'p3', name: 'Ayse', seatIndex: 1);
-      final p4_g2 = Player(id: 'p4', name: 'Fatma', seatIndex: 3);
+      final p1G2 = Player(id: 'p1', name: 'Ali', seatIndex: 0);
+      final p2G2 = Player(id: 'p2', name: 'Veli', seatIndex: 2);
+      final p3G2 = Player(id: 'p3', name: 'Ayse', seatIndex: 1);
+      final p4G2 = Player(id: 'p4', name: 'Fatma', seatIndex: 3);
 
-      p3_g2.scores.add(ScoreEntry(
+      p3G2.scores.add(ScoreEntry(
         id: 's4',
         type: ScoreType.normalBitti,
         points: -101,
@@ -69,8 +69,8 @@ void main() {
         id: 'g2',
         createdAt: DateTime.now(),
         isFinished: true,
-        team1: Team(id: 't1', name: 'T1', player1: p1_g2, player2: p2_g2),
-        team2: Team(id: 't2', name: 'T2', player1: p3_g2, player2: p4_g2),
+        team1: Team(id: 't1', name: 'T1', player1: p1G2, player2: p2G2),
+        team2: Team(id: 't2', name: 'T2', player1: p3G2, player2: p4G2),
       );
 
       final profiles = CareerService.buildProfilesFromGames([game1, game2]);

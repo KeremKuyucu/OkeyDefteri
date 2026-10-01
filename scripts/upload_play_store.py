@@ -75,7 +75,7 @@ def upload_aab(
     service_account_path: str,
     package_name: str,
     aab_path: str,
-    track: str = "production",
+    track: str = "alpha",
     status: str = "completed",
     release_notes_path: Optional[str] = None,
     user_fraction: Optional[float] = None,
@@ -207,13 +207,64 @@ def upload_aab(
             "releases": [release_data]
         }
 
-        service.edits().tracks().update(
-            packageName=package_name,
-            editId=edit_id,
-            track=track,
-            body=track_body
-        ).execute(num_retries=3)
-        print(f"   [OK] '{track}' kanalı güncellendi.")
+        committed_track = track
+        committed_status = status
+
+        try:
+            service.edits().tracks().update(
+                packageName=package_name,
+                editId=edit_id,
+                track=track,
+                body=track_body
+            ).execute(num_retries=3)
+            print(f"   [OK] '{track}' kanalı güncellendi (Durum: {status}).")
+        except HttpError as track_err:
+            success = False
+            # Senaryo 1: production veya alpha + completed reddedildiyse -> aynı kanal + draft dene
+            if track in ["production", "alpha"] and status == "completed" and track_err.resp.status == 400:
+                print(f"   [!] UYARI: '{track}' kanalına 'completed' durumu ile dağıtım kabul edilmedi (HTTP 400).")
+                print(f"   [i] '{track}' için 'draft' (taslak) durumu deneniyor...")
+                release_data["status"] = "draft"
+                track_body["releases"] = [release_data]
+                try:
+                    service.edits().tracks().update(
+                        packageName=package_name,
+                        editId=edit_id,
+                        track=track,
+                        body=track_body
+                    ).execute(num_retries=3)
+                    print(f"   [OK] '{track}' kanalına 'draft' (taslak) olarak başarıyla kaydedildi!")
+                    print("   [i] Lütfen Google Play Console web panelinden sürümü kontrol edip incelemeye gönderin.")
+                    committed_track = track
+                    committed_status = "draft"
+                    success = True
+                except Exception as draft_err:
+                    print(f"   [!] '{track}' taslak denemesi de kabul edilmedi: {draft_err}")
+
+            # Senaryo 2: İlgili kanal kilitliyse -> internal (Dahili Test) kanalına yükle
+            if not success and track in ["production", "alpha"] and track_err.resp.status == 400:
+                print("   [i] 'internal' (Dahili Test) kanalına yönlendiriliyor...")
+                release_data["status"] = "completed"
+                track_body = {
+                    "track": "internal",
+                    "releases": [release_data]
+                }
+                try:
+                    service.edits().tracks().update(
+                        packageName=package_name,
+                        editId=edit_id,
+                        track="internal",
+                        body=track_body
+                    ).execute(num_retries=3)
+                    print("   [OK] 'internal' (Dahili Test) kanalı başarıyla güncellendi!")
+                    committed_track = "internal"
+                    committed_status = "completed"
+                    success = True
+                except Exception as internal_err:
+                    print(f"   [!] 'internal' kanalı güncellemesi de başarısız oldu: {internal_err}")
+
+            if not success:
+                raise track_err
 
         # 5. Değişiklikleri onayla (Commit)
         print(">> Değişiklikler Google Play'e Onaylanıyor (Commit)...")
@@ -224,7 +275,7 @@ def upload_aab(
         commit_request.execute(num_retries=3)
         edit_id = None  # Başarıyla commit edildi, delete çağrısına gerek yok
 
-        print(f"\n[OK] TEBRİKLER! v{version_code} başarıyla Google Play Console '{track}' kanalına yüklendi!")
+        print(f"\n[OK] TEBRİKLER! v{version_code} başarıyla Google Play Console '{committed_track}' kanalına ({committed_status}) yüklendi!")
         return 0
 
     except HttpError as e:
@@ -234,10 +285,24 @@ def upload_aab(
             err_data = json.loads(e.content.decode("utf-8"))
             err_obj = err_data.get("error", {})
             err_msg = err_obj.get("message", str(e))
-            err_status = err_obj.get("status", "")
             print(f"   Hata Mesajı: {err_msg}")
+            errors = err_obj.get("errors")
+            if errors:
+                print(f"   Hata Detayları: {json.dumps(errors, indent=4, ensure_ascii=False)}")
+            details = err_obj.get("details")
+            if details:
+                print(f"   Ek Detaylar: {json.dumps(details, indent=4, ensure_ascii=False)}")
         except Exception:
             print(f"   Detay: {e}")
+
+        # Bilgilendirme: Mevcut kanalları listele
+        if edit_id:
+            try:
+                tracks_resp = service.edits().tracks().list(packageName=package_name, editId=edit_id).execute()
+                available_tracks = [t.get("track") for t in tracks_resp.get("tracks", [])]
+                print(f"\n   [Bilgi] Play Console'da Aktif Olan Kanallar: {available_tracks}")
+            except Exception:
+                pass
         return 1
     except Exception as e:
         print(f"\n[X] Beklenmeyen Hata: {e}", flush=True)
@@ -278,9 +343,9 @@ def main():
     )
     parser.add_argument(
         "--track",
-        default="production",
+        default="alpha",
         choices=["internal", "alpha", "beta", "production"],
-        help="Yayın kanalı: internal, alpha, beta, production (Varsayılan: production)"
+        help="Yayın kanalı: internal, alpha, beta, production (Varsayılan: alpha - Kapalı Test)"
     )
     parser.add_argument(
         "--status",

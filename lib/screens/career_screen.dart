@@ -351,7 +351,7 @@ class _CareerScreenState extends State<CareerScreen> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: duoList.take(6).length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
           final duo = duoList[index];
           return Container(

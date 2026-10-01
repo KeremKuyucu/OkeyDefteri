@@ -9,7 +9,9 @@ import 'auth_service.dart';
 class TelemetryService {
   static const String _uidKey = 'app_unique_id';
   static const String _logApiUrl = 'https://keremkk.com.tr/api/logs';
+  static const String _errorLogApiUrl = 'https://keremkk.com.tr/api/error-logs';
   static const Duration _requestTimeout = Duration(seconds: 5);
+  static bool _isSendingError = false;
 
   /// Aktif UID'yi döndürür:
   /// 1. Supabase'e giriş yapılmışsa doğrudan Supabase kullanıcı UID'si
@@ -37,6 +39,27 @@ class TelemetryService {
     return localUid;
   }
 
+  /// Aktif çalışma ortamının platform bilgisini standart ve detaylı biçimde döndürür:
+  /// - Web: 'web'
+  /// - Mobil/Masaüstü: 'android', 'ios', 'windows', 'macos', 'linux', 'fuchsia'
+  static String get platformName {
+    if (kIsWeb) return 'web';
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return 'android';
+      case TargetPlatform.iOS:
+        return 'ios';
+      case TargetPlatform.windows:
+        return 'windows';
+      case TargetPlatform.macOS:
+        return 'macos';
+      case TargetPlatform.linux:
+        return 'linux';
+      case TargetPlatform.fuchsia:
+        return 'fuchsia';
+    }
+  }
+
   /// Uygulama açılışında arka planda çağrılacak telemetri metodu (her açılışta gönderilir)
   static Future<void> init() async {
     try {
@@ -61,18 +84,12 @@ class TelemetryService {
 
       final effectiveUid = await getEffectiveUid(uid);
 
-      final String platform = kIsWeb
-          ? 'web'
-          : (defaultTargetPlatform == TargetPlatform.windows
-              ? 'windows'
-              : 'mobile');
-
       final bodyData = {
         'uid': effectiveUid,
         'timestamp': DateTime.now().toUtc().toIso8601String(),
         'app': 'okey_defteri',
         'event': eventName,
-        'platform': platform,
+        'platform': platformName,
         ...?additionalData,
       };
 
@@ -92,6 +109,54 @@ class TelemetryService {
     } catch (e) {
       // İnternet yoksa, sunucuya ulaşılamazsa veya zaman aşımında sessizce devam et
       debugPrint('Telemetri gönderim hatası: $e');
+    }
+  }
+
+  /// Hata kayıtlarını 'https://keremkk.com.tr/api/error-logs' uç noktasına gönderir.
+  /// Discord Botu üzerinden anlık bildirim olarak iletilir.
+  static Future<void> sendError({
+    required String event,
+    required String message,
+    dynamic stackTrace,
+    Map<String, dynamic>? metadata,
+  }) async {
+    if (_isSendingError) return; // Sonsuz döngü önlemi
+    _isSendingError = true;
+
+    try {
+      if (!SettingsService.getTelemetryEnabled()) return;
+
+      final effectiveUid = await getEffectiveUid();
+
+      final bodyData = {
+        'uid': effectiveUid,
+        'timestamp': DateTime.now().toUtc().toIso8601String(),
+        'app': 'okey_defteri',
+        'event': event,
+        'platform': platformName,
+        'message': message,
+        if (stackTrace != null) 'stackTrace': stackTrace.toString(),
+        'metadata': ?metadata,
+      };
+
+      final response = await http
+          .post(
+            Uri.parse(_errorLogApiUrl),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(bodyData),
+          )
+          .timeout(_requestTimeout);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        debugPrint('✅ Hata kaydı başarıyla iletildi: $event ($effectiveUid)');
+      } else {
+        debugPrint('⚠️ Hata kaydı iletilemedi. Status: ${response.statusCode}');
+      }
+    } catch (e) {
+      // Hata gönderimi sırasında oluşan hatalar sessizce geçilir (asla recursive çağrı yapılmaz)
+      debugPrint('Hata kaydı gönderme hatası: $e');
+    } finally {
+      _isSendingError = false;
     }
   }
 }

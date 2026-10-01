@@ -24,7 +24,7 @@ on:
       play_track:
         description: 'Play Store track'
         required: true
-        default: 'production'
+        default: 'alpha'
         type: choice
         options:
           - internal
@@ -293,7 +293,7 @@ jobs:
           github.event.inputs.upload_to_play == 'true'
         run: |
           VERSION="${{ needs.android.outputs.version }}"
-          TRACK="${{ github.event.inputs.play_track || 'production' }}"
+          TRACK="${{ github.event.inputs.play_track || 'alpha' }}"
           NOTES_FILE="RELEASE_PLAY_STORE_${VERSION}.md"
           NOTES_ARG=""
           if [ -f "$NOTES_FILE" ]; then
