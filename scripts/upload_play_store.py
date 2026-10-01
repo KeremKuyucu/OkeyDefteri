@@ -101,8 +101,12 @@ def upload_aab(
 
     print(">> Google Play Console Bağlantısı Kuruluyor...")
     try:
-        credentials = service_account.Credentials.from_service_account_file(
-            service_account_path,
+        import json as _json
+        # utf-8-sig: Python'un BOM'u otomatik attığı encoding
+        with open(service_account_path, "r", encoding="utf-8-sig") as _f:
+            _sa_info = _json.load(_f)
+        credentials = service_account.Credentials.from_service_account_info(
+            _sa_info,
             scopes=SCOPES
         )
         service = build("androidpublisher", "v3", credentials=credentials, cache_discovery=False)
