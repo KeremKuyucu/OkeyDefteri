@@ -102,9 +102,13 @@ def upload_aab(
     print(">> Google Play Console Bağlantısı Kuruluyor...")
     try:
         import json as _json
-        # utf-8-sig: Python'un BOM'u otomatik attığı encoding
-        with open(service_account_path, "r", encoding="utf-8-sig") as _f:
-            _sa_info = _json.load(_f)
+        # Binary okuyup UTF-8 BOM bytes'ını elle strip et.
+        # utf-8-sig ile açmak her zaman yetmez; secret'ın BOM'u
+        # karakter olarak gömülü olduğunda binary strip güvenlidir.
+        with open(service_account_path, "rb") as _f:
+            _raw = _f.read()
+        _raw = _raw.lstrip(b"\xef\xbb\xbf")   # UTF-8 BOM: EF BB BF
+        _sa_info = _json.loads(_raw.decode("utf-8"))
         credentials = service_account.Credentials.from_service_account_info(
             _sa_info,
             scopes=SCOPES
