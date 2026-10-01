@@ -71,6 +71,39 @@ def parse_release_notes(notes_file: str) -> List[Dict[str, str]]:
     return release_notes
 
 
+def load_service_account_info(service_account_path: str) -> Dict:
+    """
+    Service Account JSON dosyasını güvenli ve esnek bir şekilde okur.
+    UTF-8 BOM, UTF-16 BOM, baştaki/sondaki boşluklar ve olası Base64 kodlamalarını
+    otomatik temizleyerek doğrulanmış Python sözlüğü (dict) döndürür.
+    """
+    with open(service_account_path, "rb") as f:
+        raw_bytes = f.read()
+
+    # Olası UTF-8 veya UTF-16 BOM baytlarını temizle
+    if raw_bytes.startswith(b"\xef\xbb\xbf"):
+        raw_bytes = raw_bytes[3:]
+    elif raw_bytes.startswith(b"\xff\xfe"):
+        raw_bytes = raw_bytes[2:].decode("utf-16", errors="replace").encode("utf-8")
+    elif raw_bytes.startswith(b"\xfe\xff"):
+        raw_bytes = raw_bytes[2:].decode("utf-16-be", errors="replace").encode("utf-8")
+
+    text = raw_bytes.decode("utf-8-sig", errors="replace").strip().lstrip("\ufeff")
+
+    # Base64 ile encode edilmişse decode et
+    if not text.startswith("{"):
+        import base64
+        try:
+            decoded = base64.b64decode(text).decode("utf-8-sig", errors="replace").strip().lstrip("\ufeff")
+            if decoded.startswith("{"):
+                text = decoded
+        except Exception:
+            pass
+
+    import json
+    return json.loads(text)
+
+
 def upload_aab(
     service_account_path: str,
     package_name: str,
@@ -101,20 +134,13 @@ def upload_aab(
 
     print(">> Google Play Console Bağlantısı Kuruluyor...")
     try:
-        import json as _json
-        # Binary okuyup UTF-8 BOM bytes'ını elle strip et.
-        # utf-8-sig ile açmak her zaman yetmez; secret'ın BOM'u
-        # karakter olarak gömülü olduğunda binary strip güvenlidir.
-        with open(service_account_path, "rb") as _f:
-            _raw = _f.read()
-        _raw = _raw.lstrip(b"\xef\xbb\xbf")   # UTF-8 BOM: EF BB BF
-        _decoded = _raw.decode("utf-8-sig", errors="replace").strip().lstrip("\ufeff")
-        _sa_info = _json.loads(_decoded)
+        sa_info = load_service_account_info(service_account_path)
         credentials = service_account.Credentials.from_service_account_info(
-            _sa_info,
+            sa_info,
             scopes=SCOPES
         )
         service = build("androidpublisher", "v3", credentials=credentials, cache_discovery=False)
+        print(f"   [OK] Kimlik doğrulandı: {sa_info.get('client_email', 'bilinmiyor')}")
     except Exception as e:
         print(f"[X] HATA: Kimlik doğrulama veya API bağlantısı başarısız: {e}", file=sys.stderr)
         return 1
