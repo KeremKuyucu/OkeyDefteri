@@ -108,7 +108,8 @@ def upload_aab(
         with open(service_account_path, "rb") as _f:
             _raw = _f.read()
         _raw = _raw.lstrip(b"\xef\xbb\xbf")   # UTF-8 BOM: EF BB BF
-        _sa_info = _json.loads(_raw.decode("utf-8"))
+        _decoded = _raw.decode("utf-8-sig", errors="replace").strip().lstrip("\ufeff")
+        _sa_info = _json.loads(_decoded)
         credentials = service_account.Credentials.from_service_account_info(
             _sa_info,
             scopes=SCOPES
