@@ -108,7 +108,7 @@ def upload_aab(
     service_account_path: str,
     package_name: str,
     aab_path: str,
-    track: str = "alpha",
+    track: str = "production",
     status: str = "completed",
     release_notes_path: Optional[str] = None,
     user_fraction: Optional[float] = None,
