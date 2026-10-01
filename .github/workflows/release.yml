@@ -39,7 +39,7 @@ on:
       deploy_to_vercel:
         description: 'Deploy Web build to Vercel?'
         required: true
-        default: 'false'
+        default: 'true'
         type: boolean
       create_github_release:
         description: 'Create / update GitHub Release?'
@@ -145,7 +145,7 @@ jobs:
     name: Web (Flutter → Vercel)
     runs-on: ubuntu-latest
     if: >
-      secrets.VERCEL_TOKEN != '' &&
+      github.event_name == 'push' ||
       github.event.inputs.deploy_to_vercel == 'true'
 
     steps:
@@ -168,10 +168,14 @@ jobs:
       - name: Deploy to Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           mkdir -p build/web/.vercel
           if [ -f web/.vercel/project.json ]; then
             cp web/.vercel/project.json build/web/.vercel/project.json
+          elif [ -n "$VERCEL_PROJECT_ID" ] && [ -n "$VERCEL_ORG_ID" ]; then
+            printf '{"projectId":"%s","orgId":"%s"}\n' "$VERCEL_PROJECT_ID" "$VERCEL_ORG_ID" > build/web/.vercel/project.json
           fi
           npx --yes vercel deploy ./build/web --prod --yes --token "$VERCEL_TOKEN"
 
