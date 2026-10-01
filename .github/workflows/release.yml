@@ -39,7 +39,7 @@ on:
       deploy_to_vercel:
         description: 'Deploy Web build to Vercel?'
         required: true
-        default: 'true'
+        default: 'false'
         type: boolean
       create_github_release:
         description: 'Create / update GitHub Release?'
@@ -145,7 +145,7 @@ jobs:
     name: Web (Flutter → Vercel)
     runs-on: ubuntu-latest
     if: >
-      github.event_name == 'push' ||
+      secrets.VERCEL_TOKEN != '' &&
       github.event.inputs.deploy_to_vercel == 'true'
 
     steps:
@@ -170,7 +170,9 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           mkdir -p build/web/.vercel
-          cp web/.vercel/project.json build/web/.vercel/project.json
+          if [ -f web/.vercel/project.json ]; then
+            cp web/.vercel/project.json build/web/.vercel/project.json
+          fi
           npx --yes vercel deploy ./build/web --prod --yes --token "$VERCEL_TOKEN"
 
   # ============================================================
