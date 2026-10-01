@@ -209,10 +209,11 @@ Respond ONLY with a valid JSON object with exactly two keys:
 """
 
     models = [
-        "models/gemini-2.5-flash",
+        "models/gemini-3.5-flash-lite",
         "models/gemini-flash-latest",
         "models/gemini-flash-lite-latest",
-        "models/gemini-3.5-flash-lite"
+        "models/gemini-2.5-flash",
+        "models/gemini-3.5-flash"
     ]
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
