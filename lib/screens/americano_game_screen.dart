@@ -8,6 +8,8 @@ import '../widgets/team_score_bar.dart';
 import '../widgets/americano_score_dialog.dart';
 import '../widgets/ad_banner_widget.dart';
 import '../widgets/table_banter_bar.dart';
+import '../widgets/americano_penalty_dialog.dart';
+import '../widgets/americano_rules_dialog.dart';
 import 'score_history_screen.dart';
 import 'stats_screen.dart';
 import '../services/settings_service.dart';
@@ -91,73 +93,11 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
     AudioVibrationService.playClickSound();
     AudioVibrationService.vibrate();
 
-    bool islek = false;
-    bool hile = false;
+    final result = await AmericanoPenaltyDialog.show(context, player: player);
+    if (!mounted || result == null) return;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          backgroundColor: AppTheme.surfaceDark,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: [
-              const Text('🎯', style: TextStyle(fontSize: 20)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  player.name,
-                  style: const TextStyle(
-                      color: AppTheme.textPrimary, fontSize: 16),
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CheckboxListTile(
-                value: islek,
-                onChanged: (v) => setS(() => islek = v ?? false),
-                title: Text(Localization.t('americano.islek'),
-                    style: const TextStyle(color: AppTheme.textPrimary)),
-                activeColor: AppTheme.dangerRed,
-                checkColor: Colors.white,
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
-              ),
-              CheckboxListTile(
-                value: hile,
-                onChanged: (v) => setS(() => hile = v ?? false),
-                title: Text(Localization.t('americano.hile'),
-                    style: const TextStyle(color: AppTheme.textPrimary)),
-                activeColor: AppTheme.dangerRed,
-                checkColor: Colors.white,
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(Localization.t('common.cancel'),
-                  style: const TextStyle(color: AppTheme.textSecondary)),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.dangerRed),
-              child: Text(Localization.t('common.save')),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (!mounted) return;
-    if (confirmed != true) return;
+    final islek = result['islek'] ?? false;
+    final hile = result['hile'] ?? false;
     if (!islek && !hile) return;
 
     final now = DateTime.now();
@@ -252,18 +192,69 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
     AudioVibrationService.playClickSound();
     AudioVibrationService.vibrateHeavy();
 
+    final lastScore = player.scores.last;
+    final scoreStr =
+        '${lastScore.points > 0 ? "+${lastScore.points}" : "${lastScore.points}"} (${lastScore.type.label})';
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.surfaceDark,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Son Puanı Geri Al',
-            style: TextStyle(color: AppTheme.textPrimary)),
-        content: Text(
-          Localization.t('game.process_cancel',
-              args: [player.name, _game.currentRound]),
-          style: const TextStyle(color: AppTheme.textSecondary),
+        title: Text(
+          Localization.t('game.undo_score_title'),
+          style: const TextStyle(color: AppTheme.textPrimary),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              Localization.t('game.process_cancel',
+                  args: [player.name, scoreStr]),
+              style:
+                  const TextStyle(color: AppTheme.textSecondary, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceCardLight,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: AppTheme.surfaceCardLight.withValues(alpha: 0.8),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Text(lastScore.type.emoji,
+                      style: const TextStyle(fontSize: 16)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${lastScore.type.label} • Tur ${lastScore.roundNumber}',
+                      style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${lastScore.points > 0 ? "+" : ""}${lastScore.points}',
+                    style: TextStyle(
+                      color: lastScore.points > 0
+                          ? AppTheme.dangerRed
+                          : AppTheme.lightGreen,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -279,7 +270,7 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.dangerRed),
-            child: const Text('Geri Al'),
+            child: Text(Localization.t('common.undo')),
           ),
         ],
       ),
@@ -372,90 +363,7 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
   }
 
   void _showRules() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surfaceDark,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Text('🃏', style: TextStyle(fontSize: 20)),
-            const SizedBox(width: 8),
-            Text(Localization.t('americano.game_rules'),
-                style: const TextStyle(color: AppTheme.accentGold)),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                Localization.t('americano.rules_text'),
-                style: const TextStyle(
-                    color: AppTheme.textSecondary, height: 1.5),
-              ),
-              const SizedBox(height: 16),
-              const Divider(color: AppTheme.surfaceCardLight),
-              const SizedBox(height: 12),
-              ...AmericanoRound.rounds.map((r) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 26,
-                          height: 26,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: _game.currentRound == r.roundNumber
-                                ? AppTheme.accentGold
-                                : AppTheme.surfaceCardLight,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            '${r.roundNumber}',
-                            style: TextStyle(
-                              color: _game.currentRound == r.roundNumber
-                                  ? Colors.black
-                                  : AppTheme.textMuted,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            r.title,
-                            style: TextStyle(
-                              color: _game.currentRound == r.roundNumber
-                                  ? AppTheme.textPrimary
-                                  : AppTheme.textMuted,
-                              fontSize: 13,
-                              fontWeight:
-                                  _game.currentRound == r.roundNumber
-                                      ? FontWeight.w700
-                                      : FontWeight.w400,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )),
-            ],
-          ),
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx),
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.lightGreen),
-            child: Text(Localization.t('common.close')),
-          ),
-        ],
-      ),
-    );
+    AmericanoRulesDialog.show(context, currentRound: _game.currentRound);
   }
 
   @override

@@ -8,12 +8,15 @@ import '../services/cloud_service.dart';
 import '../models/game_models.dart';
 import 'new_game_screen.dart';
 import 'past_games_screen.dart';
+import 'career_screen.dart';
+import 'game_rules_screen.dart';
 import 'game_screen.dart';
 import 'americano_game_screen.dart';
-import '../widgets/developer_info.dart';
-import '../services/settings_service.dart';
+import '../widgets/cloud_backup_sheet.dart';
+import '../widgets/settings_sheet.dart';
+import '../widgets/active_game_card.dart';
+import '../widgets/home_quick_tips_widget.dart';
 import '../services/localization_service.dart';
-import '../main.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -268,467 +271,17 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _showCloudMenu(BuildContext context) {
-    final isSignedIn = AuthService.isSignedIn;
-    final name = AuthService.displayName;
-    final avatarUrl = AuthService.avatarUrl;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.surfaceDark,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 24, right: 24, top: 20,
-          bottom: MediaQuery.of(ctx).padding.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40, height: 4,
-              decoration: BoxDecoration(
-                color: AppTheme.textMuted,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            if (isSignedIn) ...[
-              // Profil bilgisi
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 26,
-                    backgroundColor: AppTheme.accentGold.withValues(alpha: 0.2),
-                    backgroundImage:
-                        avatarUrl != null ? NetworkImage(avatarUrl) : null,
-                    child: avatarUrl == null
-                        ? Text(
-                            name.isNotEmpty ? name[0].toUpperCase() : 'U',
-                            style: const TextStyle(
-                              color: AppTheme.accentGold,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          style: const TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          Localization.t('cloud.active'),
-                          style: const TextStyle(
-                            color: AppTheme.lightGreen,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              const Divider(color: AppTheme.surfaceCardLight),
-              const SizedBox(height: 12),
-              // Geri yukle
-              ListTile(
-                leading: const Icon(Icons.cloud_download_rounded,
-                    color: AppTheme.lightGreen),
-                title: Text(Localization.t('cloud.restore'),
-                    style: const TextStyle(color: AppTheme.textPrimary)),
-                subtitle: Text(Localization.t('cloud.restore_subtitle'),
-                    style: const TextStyle(color: AppTheme.textMuted, fontSize: 11)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _restoreFromCloud();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.cloud_upload_rounded,
-                    color: AppTheme.accentAmber),
-                title: Text(Localization.t('cloud.push_all'),
-                    style: const TextStyle(color: AppTheme.textPrimary)),
-                subtitle: Text(Localization.t('cloud.push_all_subtitle'),
-                    style: const TextStyle(color: AppTheme.textMuted, fontSize: 11)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _syncAllToCloud();
-                },
-              ),
-              const SizedBox(height: 8),
-              // Cikis
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    Navigator.pop(ctx);
-                    await _signOut();
-                  },
-                  icon: const Icon(Icons.logout, color: AppTheme.dangerRed, size: 18),
-                  label: Text(Localization.t('cloud.sign_out'),
-                      style: const TextStyle(color: AppTheme.dangerRed)),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(
-                        color: AppTheme.dangerRed.withValues(alpha: 0.4)),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-            ] else ...[
-              // Giris ekrani
-              const Icon(Icons.cloud_off_rounded,
-                  color: AppTheme.textMuted, size: 48),
-              const SizedBox(height: 12),
-              Text(
-                Localization.t('cloud.title'),
-                style: const TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                Localization.t('cloud.desc'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
-              ),
-              const SizedBox(height: 24),
-              // Google ile giris
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _signInWithGoogle();
-                  },
-                  icon: const Text('👀', style: TextStyle(fontSize: 18)),
-                  label: Text(
-                    Localization.t('cloud.sign_in_google'),
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+    CloudBackupSheet.show(
+      context,
+      onRestore: _restoreFromCloud,
+      onSyncAll: _syncAllToCloud,
+      onSignOut: _signOut,
+      onSignInWithGoogle: _signInWithGoogle,
     );
   }
 
-  void _showSettings() async {
-    bool isVibrationEnabled = SettingsService.getVibrationEnabled();
-    bool isSoundEnabled = SettingsService.getSoundEnabled();
-    bool isTelemetryEnabled = SettingsService.getTelemetryEnabled();
-    bool isToxicNicknamesEnabled = SettingsService.getToxicNicknamesEnabled();
-
-    if (!mounted) return;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppTheme.surfaceDark,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setBottomSheetState) {
-          return SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 24,
-                bottom: MediaQuery.of(context).padding.bottom + 24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                Text(
-                  Localization.t('settings.title'),
-                  style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ListTile(
-                  leading: const Icon(
-                    Icons.language,
-                    color: AppTheme.accentGold,
-                  ),
-                  title: Text(
-                    Localization.t('settings.language'),
-                    style: TextStyle(color: AppTheme.textPrimary),
-                  ),
-                  trailing: DropdownButton<String>(
-                    value: Localization.currentLanguage,
-                    dropdownColor: AppTheme.surfaceDark,
-                    style: const TextStyle(color: AppTheme.textPrimary),
-                    underline: const SizedBox(),
-                    icon: const Icon(
-                      Icons.arrow_drop_down,
-                      color: AppTheme.accentGold,
-                    ),
-                    items: Localization.supportedLanguages.map((String lang) {
-                      return DropdownMenuItem<String>(
-                        value: lang,
-                        child: Text(Localization.getDisplayName(lang)),
-                      );
-                    }).toList(),
-                    onChanged: (String? newValue) async {
-                      if (newValue != null &&
-                          newValue != Localization.currentLanguage) {
-                        await SettingsService.setLanguage(newValue);
-                        await Localization.changeLanguage(newValue);
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                          OkeyDefteriApp.restartApp(context);
-                        }
-                      }
-                    },
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.vibration,
-                    color: AppTheme.accentGold,
-                  ),
-                  title: Text(
-                    Localization.t('settings.vibration'),
-                    style: TextStyle(color: AppTheme.textPrimary),
-                  ),
-                  trailing: Switch(
-                    value: isVibrationEnabled,
-                    onChanged: (v) async {
-                      await SettingsService.setVibrationEnabled(v);
-                      setBottomSheetState(() {
-                        isVibrationEnabled = v;
-                      });
-                      if (v) {
-                        AudioVibrationService.vibrate();
-                      }
-                    },
-                    activeThumbColor: AppTheme.accentGold,
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.volume_up,
-                    color: AppTheme.accentGold,
-                  ),
-                  title: Text(
-                    Localization.t('settings.sound_effects'),
-                    style: TextStyle(color: AppTheme.textPrimary),
-                  ),
-                  trailing: Switch(
-                    value: isSoundEnabled,
-                    onChanged: (v) async {
-                      await SettingsService.setSoundEnabled(v);
-                      setBottomSheetState(() {
-                        isSoundEnabled = v;
-                      });
-                      if (v) {
-                        AudioVibrationService.playClickSound();
-                      }
-                    },
-                    activeThumbColor: AppTheme.accentGold,
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.security,
-                    color: AppTheme.accentGold,
-                  ),
-                  title: Text(
-                    Localization.t('settings.telemetry'),
-                    style: TextStyle(color: AppTheme.textPrimary),
-                  ),
-                  onTap: () async {
-                    if (isTelemetryEnabled) {
-                      final shouldDisable = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          backgroundColor: AppTheme.surfaceDark,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          title: Text(
-                            Localization.t('settings.telemetry_dialog_title'),
-                            style: TextStyle(
-                              color: AppTheme.textPrimary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          content: Text(
-                            Localization.t('settings.telemetry_message'),
-                            style: TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontSize: 14,
-                              height: 1.4,
-                            ),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, false),
-                              child: Text(
-                                Localization.t('settings.keep_enabled'),
-                                style: TextStyle(
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                            ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.warningOrange,
-                                foregroundColor: Colors.white,
-                              ),
-                              onPressed: () => Navigator.pop(ctx, true),
-                              child: Text(
-                                Localization.t('settings.disable_anyway'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-
-                      if (shouldDisable != true) return;
-                      await SettingsService.setTelemetryEnabled(false);
-                      setBottomSheetState(() {
-                        isTelemetryEnabled = false;
-                      });
-                    } else {
-                      await SettingsService.setTelemetryEnabled(true);
-                      setBottomSheetState(() {
-                        isTelemetryEnabled = true;
-                      });
-                    }
-                  },
-                  trailing: Switch(
-                    value: isTelemetryEnabled,
-                    onChanged: (v) async {
-                      if (!v) {
-                        final shouldDisable = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            backgroundColor: AppTheme.surfaceDark,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            title: Text(
-                              Localization.t('settings.telemetry_dialog_title'),
-                              style: TextStyle(
-                                color: AppTheme.textPrimary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            content: Text(
-                              Localization.t('settings.telemetry_message'),
-                              style: TextStyle(
-                                color: AppTheme.textSecondary,
-                                fontSize: 14,
-                                height: 1.4,
-                              ),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx, false),
-                                child: Text(
-                                  Localization.t('settings.keep_enabled'),
-                                  style: TextStyle(
-                                    color: AppTheme.textSecondary,
-                                  ),
-                                ),
-                              ),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.warningOrange,
-                                  foregroundColor: Colors.white,
-                                ),
-                                onPressed: () => Navigator.pop(ctx, true),
-                                child: Text(
-                                  Localization.t('settings.disable_anyway'),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-
-                        if (shouldDisable != true) return;
-                      }
-
-                      await SettingsService.setTelemetryEnabled(v);
-                      setBottomSheetState(() {
-                        isTelemetryEnabled = v;
-                      });
-                    },
-                    activeThumbColor: AppTheme.accentGold,
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.face_retouching_off,
-                    color: AppTheme.accentGold,
-                  ),
-                  title: Text(
-                    Localization.t('settings.toxic_nicknames'),
-                    style: TextStyle(color: AppTheme.textPrimary),
-                  ),
-                  trailing: Switch(
-                    value: isToxicNicknamesEnabled,
-                    onChanged: (v) async {
-                      await SettingsService.setToxicNicknamesEnabled(v);
-                      setBottomSheetState(() {
-                        isToxicNicknamesEnabled = v;
-                      });
-                    },
-                    activeThumbColor: AppTheme.accentGold,
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.info_outline,
-                    color: AppTheme.accentGold,
-                  ),
-                  title: Text(
-                    Localization.t('settings.about'),
-                    style: TextStyle(color: AppTheme.textPrimary),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    DeveloperInfo.show(context);
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    ));
+  void _showSettings() {
+    SettingsSheet.show(context);
   }
 
   @override
@@ -754,7 +307,19 @@ class _HomeScreenState extends State<HomeScreen>
 
                       // Aktif oyun kartı
                       if (_activeGame != null && !_activeGame!.isFinished)
-                        _buildActiveGameCard(),
+                        ActiveGameCard(
+                          game: _activeGame!,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => _activeGame!.isAmericano
+                                    ? AmericanoGameScreen(game: _activeGame!)
+                                    : GameScreen(game: _activeGame!),
+                              ),
+                            ).then((_) => _loadData());
+                          },
+                        ),
 
                       // Ana butonlar
                       _buildMainButton(
@@ -798,10 +363,57 @@ class _HomeScreenState extends State<HomeScreen>
                           ).then((_) => _loadData());
                         },
                       ),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 14),
+
+                      _buildMainButton(
+                        icon: Icons.emoji_events_rounded,
+                        label: Localization.t('home.career'),
+                        subtitle: Localization.t('home.career_subtitle'),
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFF233B27),
+                            Color(0xFF192B1C),
+                          ],
+                        ),
+                        textColor: AppTheme.accentGold,
+                        borderColor: AppTheme.accentGold.withValues(alpha: 0.3),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CareerScreen(),
+                            ),
+                          ).then((_) => _loadData());
+                        },
+                      ),
+                      const SizedBox(height: 14),
+
+                      _buildMainButton(
+                        icon: Icons.auto_stories_rounded,
+                        label: Localization.t('home.rules'),
+                        subtitle: Localization.t('home.rules_subtitle'),
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFF1E2836),
+                            Color(0xFF151C26),
+                          ],
+                        ),
+                        textColor: const Color(0xFF64B5F6),
+                        borderColor:
+                            const Color(0xFF64B5F6).withValues(alpha: 0.25),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const GameRulesScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 36),
 
                       // Kısa bilgi
-                      _buildInfoSection(),
+                      const HomeQuickTipsWidget(),
                       const SizedBox(height: 30),
                     ],
                   ),
@@ -968,128 +580,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildActiveGameCard() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2A3A1F), Color(0xFF1A2E1F)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: AppTheme.accentGold.withValues(alpha: 0.4),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.accentGold.withValues(alpha: 0.15),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(24),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => _activeGame!.isAmericano
-                    ? AmericanoGameScreen(game: _activeGame!)
-                    : GameScreen(game: _activeGame!),
-              ),
-            ).then((_) => _loadData());
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: AppTheme.accentGold.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: AppTheme.accentGold.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow_rounded,
-                    color: AppTheme.accentGold,
-                    size: 34,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: AppTheme.dangerRed,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            Localization.t('home.active_game'),
-                            style: TextStyle(
-                              color: AppTheme.accentGold,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${_activeGame!.team1.name} vs ${_activeGame!.team2.name}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'El ${_activeGame!.currentRound}',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.5),
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.accentGold.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.arrow_forward_ios,
-                    color: AppTheme.accentGold,
-                    size: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildMainButton({
     required IconData icon,
@@ -1174,85 +665,4 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildInfoSection() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceCard.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.lightGreen.withValues(alpha: 0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.info_outline_rounded,
-                color: AppTheme.accentGold,
-                size: 20,
-              ),
-              const SizedBox(width: 10),
-              Text(
-                Localization.t('home.quick_tips'),
-                style: TextStyle(
-                  color: AppTheme.accentGold,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _infoRow(
-            Icons.touch_app_rounded,
-            Localization.t('home.quick_tips_1'),
-          ),
-          const SizedBox(height: 12),
-          _infoRow(Icons.undo_rounded, Localization.t('home.quick_tips_2')),
-          const SizedBox(height: 12),
-          _infoRow(
-            Icons.calculate_rounded,
-            Localization.t('home.quick_tips_3'),
-          ),
-          const SizedBox(height: 12),
-          _infoRow(Icons.groups_rounded, Localization.t('home.quick_tips_4')),
-        ],
-      ),
-    );
-  }
-
-  Widget _infoRow(IconData icon, String text) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppTheme.lightGreen.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: AppTheme.textSecondary, size: 16),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: AppTheme.textMuted,
-              fontSize: 13,
-              height: 1.4,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }

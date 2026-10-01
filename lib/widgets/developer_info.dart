@@ -67,7 +67,7 @@ class DeveloperInfo {
                 _buildInfoTile(
                   icon: Icons.code,
                   title: Localization.t('about.source_code'),
-                  subtitle: 'github.com/keremkuyucu/okey_defteri',
+                  subtitle: 'github.com/keremkuyucu/okeydefteri',
                   url: 'https://github.com/KeremKuyucu/OkeyDefteri',
                 ),
                 _buildInfoTile(

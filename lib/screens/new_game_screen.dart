@@ -4,6 +4,11 @@ import '../theme/app_theme.dart';
 import 'game_screen.dart';
 import 'americano_game_screen.dart';
 import '../services/localization_service.dart';
+import '../services/career_service.dart';
+import '../widgets/game_mode_selector.dart';
+import '../widgets/quick_player_chips.dart';
+import '../widgets/table_preview_widget.dart';
+import '../widgets/team_form_card.dart';
 
 class NewGameScreen extends StatefulWidget {
   const NewGameScreen({super.key});
@@ -25,6 +30,7 @@ class _NewGameScreenState extends State<NewGameScreen>
   final _player3Controller = TextEditingController();
   final _player4Controller = TextEditingController();
   GameMode _selectedMode = GameMode.okey101;
+  List<String> _knownPlayers = [];
 
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
@@ -38,6 +44,9 @@ class _NewGameScreenState extends State<NewGameScreen>
     );
     _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
     _animController.forward();
+    CareerService.getKnownPlayerNames().then((names) {
+      if (mounted) setState(() => _knownPlayers = names);
+    });
   }
 
   @override
@@ -206,12 +215,26 @@ class _NewGameScreenState extends State<NewGameScreen>
               const SizedBox(height: 20),
 
               // Oyun modu seçimi
-              _buildModePicker(),
-              const SizedBox(height: 24),
+              GameModeSelector(
+                selectedMode: _selectedMode,
+                onModeChanged: (mode) => setState(() => _selectedMode = mode),
+              ),
+              const SizedBox(height: 20),
+
+              // Kayıtlı oyuncular hızlı seçim
+              if (_knownPlayers.isNotEmpty)
+                QuickPlayerChips(
+                  knownPlayers: _knownPlayers,
+                  isPlayerSelected: (name) =>
+                      _player1Controller.text == name ||
+                      _player2Controller.text == name ||
+                      _player3Controller.text == name ||
+                      _player4Controller.text == name,
+                  onPlayerTapped: _fillNextAvailablePlayer,
+                ),
 
               // Takım 1
-              _buildTeamSection(
-                teamName: Localization.t('new_game.team_1'),
+              TeamFormCard(
                 teamController: _team1NameController,
                 player1Label: Localization.t('new_game.player_1_top'),
                 player2Label: Localization.t('new_game.player_3_bottom'),
@@ -222,8 +245,7 @@ class _NewGameScreenState extends State<NewGameScreen>
               const SizedBox(height: 24),
 
               // Takım 2
-              _buildTeamSection(
-                teamName: Localization.t('new_game.team_2'),
+              TeamFormCard(
                 teamController: _team2NameController,
                 player1Label: Localization.t('new_game.player_2_right'),
                 player2Label: Localization.t('new_game.player_4_left'),
@@ -231,10 +253,23 @@ class _NewGameScreenState extends State<NewGameScreen>
                 player2Controller: _player4Controller,
                 color: AppTheme.accentAmber,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
               // Mini önizleme
-              _buildTablePreview(),
+              ListenableBuilder(
+                listenable: Listenable.merge([
+                  _player1Controller,
+                  _player2Controller,
+                  _player3Controller,
+                  _player4Controller,
+                ]),
+                builder: (context, _) => TablePreviewWidget(
+                  player1Name: _player1Controller.text,
+                  player2Name: _player2Controller.text,
+                  player3Name: _player3Controller.text,
+                  player4Name: _player4Controller.text,
+                ),
+              ),
               const SizedBox(height: 32),
 
               // Başla butonu
@@ -297,469 +332,24 @@ class _NewGameScreenState extends State<NewGameScreen>
     );
   }
 
-  Widget _buildTeamSection({
-    required String teamName,
-    required TextEditingController teamController,
-    required String player1Label,
-    required String player2Label,
-    required TextEditingController player1Controller,
-    required TextEditingController player2Controller,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Takım ismi
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(Icons.groups_rounded, color: color, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: teamController,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: Localization.t('new_game.team_name'),
-                    labelStyle: TextStyle(color: color.withValues(alpha: 0.6)),
-                    filled: true,
-                    fillColor: AppTheme.surfaceCardLight,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: color, width: 2),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-
-          // Oyuncu 1
-          TextField(
-            controller: player1Controller,
-            style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15),
-            decoration: InputDecoration(
-              labelText: player1Label,
-              prefixIcon: Icon(
-                Icons.person,
-                color: color.withValues(alpha: 0.5),
-              ),
-              filled: true,
-              fillColor: AppTheme.surfaceCardLight,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: color, width: 2),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // Oyuncu 2
-          TextField(
-            controller: player2Controller,
-            style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15),
-            decoration: InputDecoration(
-              labelText: player2Label,
-              prefixIcon: Icon(
-                Icons.person,
-                color: color.withValues(alpha: 0.5),
-              ),
-              filled: true,
-              fillColor: AppTheme.surfaceCardLight,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: color, width: 2),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildModePicker() {
-    final isAmericanoSelected = _selectedMode == GameMode.americano ||
-        _selectedMode == GameMode.americanoSolo;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          Localization.t('americano.select_mode'),
-          style: const TextStyle(
-            color: AppTheme.textSecondary,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.3,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(child: _modeChip(GameMode.okey101)),
-            const SizedBox(width: 8),
-            Expanded(child: _modeChip(GameMode.normalOkey)),
-          ],
-        ),
-        const SizedBox(height: 8),
-        _modeChip(GameMode.americano),
-        // Americano alt seçeneği: Takımlı vs Tekli
-        if (isAmericanoSelected) ...[
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceCard,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppTheme.accentGold.withValues(alpha: 0.25),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  Localization.t('new_game.americano_mode'),
-                  style: const TextStyle(
-                    color: AppTheme.accentGold,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _americanoSubChip(
-                        mode: GameMode.americano,
-                        label: Localization.t('new_game.mode_team'),
-                        emoji: '🤝',
-                        desc: Localization.t('new_game.mode_team_desc'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _americanoSubChip(
-                        mode: GameMode.americanoSolo,
-                        label: Localization.t('new_game.mode_solo'),
-                        emoji: '👤',
-                        desc: Localization.t('new_game.mode_solo_desc'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _americanoSubChip({
-    required GameMode mode,
-    required String label,
-    required String emoji,
-    required String desc,
-  }) {
-    final isSelected = _selectedMode == mode;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedMode = mode),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppTheme.accentGold.withValues(alpha: 0.15)
-              : AppTheme.surfaceCardLight,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected
-                ? AppTheme.accentGold
-                : AppTheme.surfaceCardLight,
-            width: isSelected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 18)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: isSelected
-                          ? AppTheme.accentGold
-                          : AppTheme.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                    ),
-                  ),
-                  Text(
-                    desc,
-                    style: const TextStyle(
-                        color: AppTheme.textMuted, fontSize: 10),
-                  ),
-                ],
-              ),
-            ),
-            if (isSelected)
-              const Icon(Icons.check_circle_rounded,
-                  size: 14, color: AppTheme.accentGold),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _modeChip(GameMode mode) {
-    // Americano chip: hem americano hem americanoSolo seçildiğinde "aktif" görünsün
-    final isSelected = _selectedMode == mode ||
-        (mode == GameMode.americano &&
-            (_selectedMode == GameMode.americano ||
-                _selectedMode == GameMode.americanoSolo));
-    final isAmericano = mode == GameMode.americano;
-    final isNormalOkey = mode == GameMode.normalOkey;
-
-    final String label;
-    final String emoji;
-    final String desc;
-
-    if (isAmericano) {
-      label = Localization.t('americano.mode_name');
-      emoji = '🃏';
-      desc = Localization.t('new_game.desc_americano');
-    } else if (isNormalOkey) {
-      label = Localization.t('normal_okey.mode_name');
-      emoji = '🎴';
-      desc = Localization.t('new_game.desc_normal_okey');
+  void _fillNextAvailablePlayer(String name) {
+    if (_player1Controller.text.isEmpty) {
+      _player1Controller.text = name;
+    } else if (_player2Controller.text.isEmpty &&
+        _player1Controller.text != name) {
+      _player2Controller.text = name;
+    } else if (_player3Controller.text.isEmpty &&
+        _player1Controller.text != name &&
+        _player2Controller.text != name) {
+      _player3Controller.text = name;
+    } else if (_player4Controller.text.isEmpty &&
+        _player1Controller.text != name &&
+        _player2Controller.text != name &&
+        _player3Controller.text != name) {
+      _player4Controller.text = name;
     } else {
-      label = Localization.t('americano.mode_101');
-      emoji = '🀄';
-      desc = Localization.t('new_game.desc_101');
+      _player1Controller.text = name;
     }
-
-    return GestureDetector(
-      onTap: () => setState(() {
-        if (isAmericano) {
-          // Americano seçilince varsayılan takımlı mod
-          _selectedMode = GameMode.americano;
-        } else {
-          _selectedMode = mode;
-        }
-      }),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-        decoration: BoxDecoration(
-          gradient: isSelected
-              ? (isAmericano ? AppTheme.goldGradient : null)
-              : null,
-          color: isSelected && !isAmericano
-              ? (isNormalOkey
-                  ? AppTheme.accentGold.withValues(alpha: 0.15)
-                  : AppTheme.lightGreen.withValues(alpha: 0.15))
-              : isSelected
-              ? null
-              : AppTheme.surfaceCard,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected
-                ? (isAmericano
-                    ? AppTheme.accentGold
-                    : isNormalOkey
-                        ? AppTheme.accentGold
-                        : AppTheme.lightGreen)
-                : AppTheme.surfaceCardLight,
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: (isAmericano || isNormalOkey
-                            ? AppTheme.accentGold
-                            : AppTheme.lightGreen)
-                        .withValues(alpha: 0.25),
-                    blurRadius: 10,
-                    spreadRadius: 1,
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 22)),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: isSelected
-                          ? (isAmericano
-                              ? Colors.black
-                              : isNormalOkey
-                                  ? AppTheme.accentGold
-                                  : AppTheme.lightGreen)
-                          : AppTheme.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                  ),
-                  Text(
-                    desc,
-                    style: TextStyle(
-                      color: isSelected
-                          ? (isAmericano
-                              ? Colors.black54
-                              : AppTheme.textMuted)
-                          : AppTheme.textMuted,
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (isSelected)
-              Icon(
-                Icons.check_circle_rounded,
-                size: 18,
-                color: isAmericano
-                    ? Colors.black54
-                    : isNormalOkey
-                        ? AppTheme.accentGold
-                        : AppTheme.lightGreen,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTablePreview() {
-    final p1 = _player1Controller.text.isEmpty
-        ? Localization.t('new_game.player_1')
-        : _player1Controller.text;
-    final p2 = _player2Controller.text.isEmpty
-        ? Localization.t('new_game.player_2')
-        : _player2Controller.text;
-    final p3 = _player3Controller.text.isEmpty
-        ? Localization.t('new_game.player_3')
-        : _player3Controller.text;
-    final p4 = _player4Controller.text.isEmpty
-        ? Localization.t('new_game.player_4')
-        : _player4Controller.text;
-
-    return Container(
-      height: 240, // Yükseklik artırıldı ki oyuncular sığsın
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.lightGreen.withValues(alpha: 0.15)),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Masa
-          Container(
-            width: 125,
-            height: 125,
-            decoration: BoxDecoration(
-              gradient: AppTheme.tableGradient,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppTheme.accentGold.withValues(alpha: 0.3),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primaryGreen.withValues(alpha: 0.2),
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: const Center(
-              child: Text('🎴', style: TextStyle(fontSize: 28)),
-            ),
-          ),
-          // Üst
-          Positioned(top: 0, child: _miniPlayer(p1, AppTheme.lightGreen)),
-          // Sağ
-          Positioned(right: 0, child: _miniPlayer(p2, AppTheme.accentAmber)),
-          // Alt
-          Positioned(bottom: 0, child: _miniPlayer(p3, AppTheme.lightGreen)),
-          // Sol
-          Positioned(left: 0, child: _miniPlayer(p4, AppTheme.accentAmber)),
-        ],
-      ),
-    );
-  }
-
-  Widget _miniPlayer(String name, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        name.length > 8 ? '${name.substring(0, 8)}...' : name,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
+    setState(() {});
   }
 }

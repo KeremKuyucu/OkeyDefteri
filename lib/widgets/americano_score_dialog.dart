@@ -35,7 +35,6 @@ class _AmericanoRoundScoreDialogState
   final Map<String, TextEditingController> _cardControllers = {};
   final Map<String, bool> _islekFlags = {};
   final Map<String, bool> _hileFlags = {};
-  final Map<String, bool> _takimYokOkeyAldiFlags = {};
   final Map<String, bool> _okeyAttiFlags = {};
   final Map<String, bool> _yanlisElActiFlags = {};
   final Map<String, bool> _islekAtarakBittiFlags = {};
@@ -48,7 +47,6 @@ class _AmericanoRoundScoreDialogState
       _cardControllers[p.id] = TextEditingController();
       _islekFlags[p.id] = false;
       _hileFlags[p.id] = false;
-      _takimYokOkeyAldiFlags[p.id] = false;
       _okeyAttiFlags[p.id] = false;
       _yanlisElActiFlags[p.id] = false;
       _islekAtarakBittiFlags[p.id] = false;
@@ -103,7 +101,7 @@ class _AmericanoRoundScoreDialogState
           entries.add(ScoreEntry(
             id: '${now.millisecondsSinceEpoch}_${p.id}_win',
             type: ScoreType.americanoKazandi,
-            points: -50,
+            points: -30,
             timestamp: now,
             roundNumber: widget.roundNumber,
           ));
@@ -136,15 +134,6 @@ class _AmericanoRoundScoreDialogState
         entries.add(ScoreEntry(
           id: '${now.millisecondsSinceEpoch}_${p.id}_hile',
           type: ScoreType.americanoHile,
-          points: 50,
-          timestamp: now,
-          roundNumber: widget.roundNumber,
-        ));
-      }
-      if (_takimYokOkeyAldiFlags[p.id] == true) {
-        entries.add(ScoreEntry(
-          id: '${now.millisecondsSinceEpoch}_${p.id}_takim_yok',
-          type: ScoreType.americanoTakimYokOkeyAldi,
           points: 50,
           timestamp: now,
           roundNumber: widget.roundNumber,
@@ -684,7 +673,7 @@ class _AmericanoRoundScoreDialogState
                                 ? '+100 puan'
                                 : _finishOption == AmericanoFinishOption.okey
                                     ? '-100 puan'
-                                    : '-50 puan',
+                                    : '-30 puan',
                             style: TextStyle(
                               color: _finishOption == AmericanoFinishOption.wrong
                                   ? AppTheme.dangerRed
@@ -791,6 +780,11 @@ class _AmericanoRoundScoreDialogState
                   labelText: Localization.t('americano.remaining_cards_hint'),
                   labelStyle:
                       const TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                  helperText: Localization.t('americano.okey_hand_helper'),
+                  helperStyle: const TextStyle(
+                      color: AppTheme.accentGold,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600),
                   filled: true,
                   fillColor: AppTheme.surfaceCardLight,
                   border: OutlineInputBorder(
@@ -829,14 +823,6 @@ class _AmericanoRoundScoreDialogState
                   onTap: () => setState(() =>
                       _hileFlags[player.id] =
                           !(_hileFlags[player.id] ?? false)),
-                ),
-                _penaltyChip(
-                  label: Localization.t('americano.takim_yok_okey_aldi'),
-                  emoji: '🃏⚠️',
-                  isSelected: _takimYokOkeyAldiFlags[player.id] ?? false,
-                  onTap: () => setState(() =>
-                      _takimYokOkeyAldiFlags[player.id] =
-                          !(_takimYokOkeyAldiFlags[player.id] ?? false)),
                 ),
                 _penaltyChip(
                   label: Localization.t('americano.okey_atti'),
