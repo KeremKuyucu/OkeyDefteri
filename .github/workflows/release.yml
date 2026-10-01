@@ -177,7 +177,8 @@ jobs:
           elif [ -n "$VERCEL_PROJECT_ID" ] && [ -n "$VERCEL_ORG_ID" ]; then
             printf '{"projectId":"%s","orgId":"%s"}\n' "$VERCEL_PROJECT_ID" "$VERCEL_ORG_ID" > build/web/.vercel/project.json
           fi
-          npx --yes vercel deploy ./build/web --prod --yes --token "$VERCEL_TOKEN"
+          CLEAN_TOKEN=$(printf '%s' "$VERCEL_TOKEN" | sed 's/^\xef\xbb\xbf//' | tr -d '[:space:]')
+          npx --yes vercel deploy ./build/web --prod --yes --token "$CLEAN_TOKEN"
 
   # ============================================================
   # JOB: release
