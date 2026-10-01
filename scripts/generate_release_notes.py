@@ -111,15 +111,19 @@ def get_git_context(version: str) -> tuple[str, str, str]:
 
     return last_tag, commit_log, diff_stat
 
+def _sanitize_key(raw: str) -> str:
+    """Strip BOM, zero-width chars, and surrounding whitespace from a key."""
+    return raw.strip().lstrip("\ufeff").strip()
+
 def find_gemini_api_key(explicit_key: str = None) -> str:
     if explicit_key:
-        return explicit_key.strip()
+        return _sanitize_key(explicit_key)
     if os.environ.get("GEMINI_API_KEY"):
-        return os.environ["GEMINI_API_KEY"].strip()
+        return _sanitize_key(os.environ["GEMINI_API_KEY"])
 
     key_file = Path("C:/Users/kerem/Projects/imza-bilgileri/gemini.key")
     if key_file.exists():
-        key = key_file.read_text(encoding="utf-8").strip()
+        key = _sanitize_key(key_file.read_text(encoding="utf-8-sig"))
         if key:
             return key
 
