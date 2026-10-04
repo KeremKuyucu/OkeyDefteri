@@ -10,6 +10,8 @@ import '../widgets/bulk_round_end_dialog.dart';
 import '../widgets/normal_okey_round_end_dialog.dart';
 import '../widgets/ad_banner_widget.dart';
 import '../widgets/table_banter_bar.dart';
+import '../widgets/game_share_card.dart';
+import '../services/share_service.dart';
 import 'score_history_screen.dart';
 import 'stats_screen.dart';
 import '../services/settings_service.dart';
@@ -28,6 +30,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   late Game _game;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  final GlobalKey _shareKey = GlobalKey();
 
   @override
   void initState() {
@@ -749,11 +752,39 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
+  Future<void> _shareGame() async {
+    // Paylaşım kartını offscreen overlay üzerinde oluştur
+    final overlayState = Overlay.of(context);
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => Positioned(
+        left: -9999,
+        top: -9999,
+        child: Material(
+          color: Colors.transparent,
+          child: RepaintBoundary(
+            key: _shareKey,
+            child: GameShareCard(game: _game),
+          ),
+        ),
+      ),
+    );
+    overlayState.insert(entry);
+
+    // İki frame bekle — widget tamamen render edilsin
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    await ShareService.shareGameCard(repaintKey: _shareKey, game: _game);
+
+    entry.remove();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundDark,
       body: SafeArea(
+
         child: Column(
           children: [
             // Üst bar
@@ -843,6 +874,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 Icons.analytics,
                 Localization.t('game.stats'),
               ),
+              _popupItem(
+                'share',
+                Icons.share_rounded,
+                Localization.t('common.share'),
+              ),
               if (!_game.isFinished)
                 _popupItem('end', Icons.flag, Localization.t('game.end_game')),
             ],
@@ -863,6 +899,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       builder: (context) => StatsScreen(game: _game),
                     ),
                   );
+                  break;
+                case 'share':
+                  _shareGame();
                   break;
                 case 'end':
                   _endGame();

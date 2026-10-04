@@ -10,6 +10,8 @@ import '../widgets/ad_banner_widget.dart';
 import '../widgets/table_banter_bar.dart';
 import '../widgets/americano_penalty_dialog.dart';
 import '../widgets/americano_rules_dialog.dart';
+import '../widgets/game_share_card.dart';
+import '../services/share_service.dart';
 import 'score_history_screen.dart';
 import 'stats_screen.dart';
 import '../services/settings_service.dart';
@@ -31,6 +33,7 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
   late Animation<double> _pulseAnimation;
   late AnimationController _bannerController;
   late Animation<double> _bannerAnimation;
+  final GlobalKey _shareKey = GlobalKey();
 
   @override
   void initState() {
@@ -366,6 +369,28 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
     AmericanoRulesDialog.show(context, currentRound: _game.currentRound);
   }
 
+  Future<void> _shareGame() async {
+    final overlayState = Overlay.of(context);
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => Positioned(
+        left: -9999,
+        top: -9999,
+        child: Material(
+          color: Colors.transparent,
+          child: RepaintBoundary(
+            key: _shareKey,
+            child: GameShareCard(game: _game),
+          ),
+        ),
+      ),
+    );
+    overlayState.insert(entry);
+    await Future.delayed(const Duration(milliseconds: 200));
+    await ShareService.shareGameCard(repaintKey: _shareKey, game: _game);
+    entry.remove();
+  }
+
   @override
   Widget build(BuildContext context) {
     final round = _currentRound;
@@ -539,6 +564,8 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
                   Localization.t('game.stats')),
               _popupItem('rules', Icons.menu_book,
                   Localization.t('americano.game_rules')),
+              _popupItem('share', Icons.share_rounded,
+                  Localization.t('common.share')),
               if (!_game.isFinished)
                 _popupItem('end', Icons.flag,
                     Localization.t('game.end_game')),
@@ -563,6 +590,8 @@ class _AmericanoGameScreenState extends State<AmericanoGameScreen>
                   );
                 case 'rules':
                   _showRules();
+                case 'share':
+                  _shareGame();
                 case 'end':
                   _endGame();
               }

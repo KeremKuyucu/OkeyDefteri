@@ -20,7 +20,8 @@
     "send": "Send",
     "field_required": "This field is required",
     "finished": "Finished",
-    "ongoing": "Ongoing"
+    "ongoing": "Ongoing",
+    "share": "Share"
   },
   "settings": {
     "title": "Settings",
@@ -164,7 +165,22 @@
     "ongoing": "ONGOING",
     "round": "{0} rounds",
     "hour_minute": "{0} hours {1} minutes",
-    "minute": "{0} minutes"
+    "minute": "{0} minutes",
+    "show_breakdown": "Score Breakdown",
+    "hide_breakdown": "Hide Breakdown"
+  },
+  "game_modes": {
+    "okey_101": "101 Okey",
+    "americano": "Americano",
+    "normal_okey": "Classic Okey"
+  },
+  "game_share": {
+    "winner": "{0} Won!",
+    "total_finishes": "Total Finishes",
+    "total_penalties": "Total Penalties",
+    "round_count": "Round Count",
+    "win_abbr": "W",
+    "penalty_abbr": "P"
   },
   "history": {
     "title": "Game History",

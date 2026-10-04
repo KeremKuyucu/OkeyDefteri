@@ -19,7 +19,8 @@
     "error": "Hata",
     "send": "Gönder",
     "finished": "Bitti",
-    "ongoing": "Devam Ediyor"
+    "ongoing": "Devam Ediyor",
+    "share": "Paylaş"
   },
   "settings": {
     "title": "Ayarlar",
@@ -163,7 +164,22 @@
     "ongoing": "DEVAM EDİYOR",
     "round": "{0} tur",
     "hour_minute": "{0} saat {1} dakika",
-    "minute": "{0} dakika"
+    "minute": "{0} dakika",
+    "show_breakdown": "Puan Kırılımı",
+    "hide_breakdown": "Kırılımı Gizle"
+  },
+  "game_modes": {
+    "okey_101": "101 Okey",
+    "americano": "Americano",
+    "normal_okey": "Normal Okey"
+  },
+  "game_share": {
+    "winner": "{0} Kazandı!",
+    "total_finishes": "Toplam Bitiş",
+    "total_penalties": "Toplam Ceza",
+    "round_count": "Tur Sayısı",
+    "win_abbr": "G",
+    "penalty_abbr": "C"
   },
   "history": {
     "title": "Geçmiş Oyunlar",
