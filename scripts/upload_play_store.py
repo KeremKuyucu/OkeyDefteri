@@ -111,6 +111,7 @@ def upload_aab(
     track: str = "production",
     status: str = "completed",
     release_notes_path: Optional[str] = None,
+    version_code: Optional[int] = None,
     user_fraction: Optional[float] = None,
     chunk_size_mb: int = DEFAULT_CHUNK_SIZE_MB,
     timeout: int = DEFAULT_TIMEOUT_SECONDS,
@@ -176,6 +177,7 @@ def upload_aab(
         last_pct = -1
         retry_count = 0
         base_delay = 5  # saniye
+        bundle_already_exists = False
 
         while response is None:
             try:
@@ -192,6 +194,19 @@ def upload_aab(
                 # Başarılı chunk sonrasında retry sayacını sıfırla
                 retry_count = 0
             except HttpError as e:
+                # Sürüm kodu zaten Google Play'de mevcutsa (HTTP 400 - "already been used" / versionCodeAlreadyUsed)
+                err_content = ""
+                try:
+                    err_content = e.content.decode("utf-8")
+                except Exception:
+                    err_content = str(e)
+
+                if e.resp.status == 400 and ("already been used" in err_content.lower() or "versioncodealreadyused" in err_content.lower()):
+                    print(f"\n   [!] BİLGİ: Bu paket sürümü zaten Google Play Console'a yüklenmiş.")
+                    print(f"   [i] Mevcut paket kullanılarak '{track}' kanalına dağıtım işlemine devam ediliyor...")
+                    bundle_already_exists = True
+                    break
+
                 # Kalıcı HTTP istemci hatalarında doğrudan sonlandır
                 if e.resp.status in [400, 401, 403, 404]:
                     raise
@@ -212,11 +227,26 @@ def upload_aab(
                 print(f"\n   [!] Ağ / Zaman aşımı hatası: {e}. {sleep_sec}s sonra kaldığı yerden tekrar deneniyor... ({retry_count}/{max_retries})", flush=True)
                 time.sleep(sleep_sec)
 
-        if last_pct < 100:
-            print(f"   ... Yükleme: %100 ({file_size_mb:.1f} / {file_size_mb:.1f} MB)", flush=True)
+        if not bundle_already_exists:
+            if last_pct < 100:
+                print(f"   ... Yükleme: %100 ({file_size_mb:.1f} / {file_size_mb:.1f} MB)", flush=True)
+            if isinstance(response, dict) and response.get("versionCode"):
+                version_code = response.get("versionCode")
+            print(f"   [OK] AAB başarıyla yüklendi! Sürüm Kodu (VersionCode): {version_code}")
+        else:
+            if not version_code:
+                try:
+                    bundles_res = service.edits().bundles().list(packageName=package_name, editId=edit_id).execute()
+                    bundles_list = bundles_res.get("bundles", [])
+                    if bundles_list:
+                        version_code = max(b["versionCode"] for b in bundles_list)
+                        print(f"   [i] Google Play'deki mevcut en güncel sürüm kodu tespit edildi: {version_code}")
+                except Exception as list_err:
+                    print(f"   [!] Mevcut bundle listesi alınamadı: {list_err}")
 
-        version_code = response.get("versionCode") if isinstance(response, dict) else None
-        print(f"   [OK] AAB başarıyla yüklendi! Sürüm Kodu (VersionCode): {version_code}")
+        if not version_code:
+            print("[X] HATA: Hedef sürüm kodu (versionCode) belirlenemedi!", file=sys.stderr)
+            return 1
 
         # 3. Sürüm notlarını hazırla
         release_notes = []
@@ -410,6 +440,11 @@ def main():
         help=f"Ağ zaman aşımı süresi saniye cinsinden (Varsayılan: {DEFAULT_TIMEOUT_SECONDS} sn)"
     )
     parser.add_argument(
+        "--version-code",
+        type=int,
+        help="Hedef sürüm kodu (VersionCode). Belirtilirse ve bundle zaten yüklenmişse doğrudan bu sürüm kodu kullanılır."
+    )
+    parser.add_argument(
         "--max-retries",
         type=int,
         default=5,
@@ -425,6 +460,7 @@ def main():
         track=args.track,
         status=args.status,
         release_notes_path=args.release_notes,
+        version_code=args.version_code,
         user_fraction=args.user_fraction,
         chunk_size_mb=args.chunk_size_mb,
         timeout=args.timeout,
