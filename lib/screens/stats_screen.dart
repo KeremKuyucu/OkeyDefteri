@@ -19,9 +19,9 @@ class StatsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
-          'İstatistikler',
-          style: TextStyle(
+        title: Text(
+          Localization.t('stats.title'),
+          style: const TextStyle(
             color: AppTheme.textPrimary,
             fontWeight: FontWeight.w700,
           ),
