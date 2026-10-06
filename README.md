@@ -4,6 +4,10 @@ A premium Flutter score-keeping app for physical Okey 101 card games. Track scor
 
 Built entirely with AI assistance for personal use during real-life Okey matches.
 
+<a href="https://play.google.com/store/apps/details?id=com.keremkuyucu.okey_defteri">
+  <img alt="Get it on Google Play" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" height="70" />
+</a>
+
 ## ✨ Features
 
 ### 🎮 Live Match Tracking
@@ -100,11 +104,22 @@ assets/
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### 📲 Download
+Install the app directly on your Android device from Google Play:
+
+<a href="https://play.google.com/store/apps/details?id=com.keremkuyucu.okey_defteri">
+  <img alt="Get it on Google Play" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" height="60" />
+</a>
+
+---
+
+### 💻 Building from Source
+
+#### Prerequisites
 - Flutter SDK (`^3.12.0`)
 - Android / iOS emulator or a physical device
 
-### Installation
+#### Installation
 
 ```bash
 # Clone the repository
@@ -132,7 +147,8 @@ flutter run
 
 ## 📦 Releases
 
-Releases are automatically built and published to GitHub Releases and Google Play Console via automated GitHub Actions CI/CD workflows upon pushing a version tag (e.g. `v1.0.9`). Release notes are dynamically generated using Gemini API.
+- **Google Play:** [Okey Defteri on Google Play Store](https://play.google.com/store/apps/details?id=com.keremkuyucu.okey_defteri)
+- **GitHub Releases:** Releases are automatically built and published to GitHub Releases and Google Play Console via automated GitHub Actions CI/CD workflows upon pushing a version tag (e.g. `v1.0.9`). Release notes are dynamically generated using Gemini API.
 
 ## 📄 License
 
