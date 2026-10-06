@@ -24,7 +24,7 @@ on:
       play_track:
         description: 'Play Store track'
         required: true
-        default: 'alpha'
+        default: 'production'
         type: choice
         options:
           - internal
