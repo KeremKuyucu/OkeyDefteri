@@ -36,6 +36,10 @@
 -keep class io.flutter.plugins.urllauncher.** { *; }
 
 # Genel Uyarı Bastırma
+-dontwarn com.google.android.play.core.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.conscrypt.**
+-dontwarn org.openjsse.**
 -dontwarn javax.annotation.**
 -dontwarn org.checkerframework.**
 -dontwarn com.google.errorprone.annotations.**
