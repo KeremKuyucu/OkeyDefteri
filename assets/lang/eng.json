@@ -30,6 +30,8 @@
     "sound_effects": "Sound Effects",
     "telemetry": "Send User Data",
     "toxic_nicknames": "Toxic Nicknames",
+    "ad_preferences": "Ad & Privacy Preferences",
+    "ad_preferences_desc": "Manage targeted ads and data consent",
     "about": "About App",
     "import_export": "Import/Export Data",
     "import_export_info": "Paste your JSON data here",

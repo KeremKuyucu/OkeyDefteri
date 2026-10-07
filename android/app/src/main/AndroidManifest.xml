@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- Hedeflenmiş / Kişiselleştirilmiş reklamlar için Google Reklam Kimliği (AD_ID) izni -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
     <application
         android:label="Okey Defteri"
         android:name="${applicationName}"

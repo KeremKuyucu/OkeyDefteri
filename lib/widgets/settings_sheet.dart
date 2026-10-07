@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/settings_service.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
+import '../services/ad_service.dart';
 import '../main.dart';
 import 'developer_info.dart';
 
@@ -295,6 +296,32 @@ class _SettingsSheetState extends State<SettingsSheet> {
                 activeThumbColor: AppTheme.accentGold,
               ),
             ),
+            if (AdService.isSupported)
+              ListTile(
+                leading: const Icon(
+                  Icons.ads_click,
+                  color: AppTheme.accentGold,
+                ),
+                title: Text(
+                  Localization.t('settings.ad_preferences'),
+                  style: const TextStyle(color: AppTheme.textPrimary),
+                ),
+                subtitle: Text(
+                  Localization.t('settings.ad_preferences_desc'),
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+                trailing: const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: AppTheme.textSecondary,
+                ),
+                onTap: () {
+                  AdService.showPrivacyOptionsForm(context);
+                },
+              ),
             ListTile(
               leading: const Icon(
                 Icons.info_outline,

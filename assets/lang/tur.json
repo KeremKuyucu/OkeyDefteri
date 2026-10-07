@@ -29,6 +29,8 @@
     "sound_effects": "Ses Efektleri",
     "telemetry": "Kullanıcı Verisi Gönder",
     "toxic_nicknames": "Küfürlü Lakaplar",
+    "ad_preferences": "Reklam & Gizlilik Tercihleri",
+    "ad_preferences_desc": "Hedeflenmiş reklam ve veri izinlerini yönetin",
     "about": "Uygulama Hakkında",
     "import_export": "Verileri İçe/Dışa Aktar",
     "import_export_info": "JSON verisini buraya yapıştırın",
