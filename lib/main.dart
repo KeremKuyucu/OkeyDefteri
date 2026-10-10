@@ -26,27 +26,24 @@ void main() async {
     );
   };
 
-  // Asenkron ve platform seviyesi yakalanmamış hatalar
   PlatformDispatcher.instance.onError = (error, stack) {
     TelemetryService.sendError(
       event: 'platform_uncaught_error',
       message: error.toString(),
       stackTrace: stack,
     );
-    return false;
+    return true; 
   };
 
+  await SettingsService.init();
   await AdService.init();
   await Supabase.initialize(
     url: 'https://brgwnlbgasameiuuoxte.supabase.co',
     publishableKey: 'sb_publishable_dYkNlqj0PL3jZsq2Kt0Yyg_pi1gyIdl',
   );
-  await SettingsService.init();
   await TelemetryService.init();
   await Localization.init();
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
