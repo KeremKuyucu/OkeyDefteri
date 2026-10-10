@@ -11,7 +11,7 @@ class TelemetryService {
   static const String _logApiUrl = 'https://keremkk.com.tr/api/logs';
   static const String _errorLogApiUrl = 'https://keremkk.com.tr/api/error-logs';
   static const Duration _requestTimeout = Duration(seconds: 5);
-  static const String appVersion = '1.0.18+22';
+  static const String appVersion = '1.0.19+23';
 
   static final http.Client _client = http.Client();
   static String? _cachedUid;
