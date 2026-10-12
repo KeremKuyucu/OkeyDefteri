@@ -12,7 +12,29 @@ class TelemetryService {
   static const String _logApiUrl = 'https://keremkuyucu.com.tr/api/logs';
   static const String _errorLogApiUrl = 'https://keremkuyucu.com.tr/api/error-logs';
   static const Duration _requestTimeout = Duration(seconds: 5);
-  static String appVersion = '1.1.0+24';
+  static String? _cachedAppVersion;
+
+  /// package_info_plus üzerinden versiyon bilgisini (örn. '1.1.0+24') alır ve önbelleğe alır.
+  static Future<String> getAppVersion() async {
+    if (_cachedAppVersion != null && _cachedAppVersion!.isNotEmpty) {
+      return _cachedAppVersion!;
+    }
+
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final version = info.version;
+      final buildNumber = info.buildNumber;
+      _cachedAppVersion =
+          buildNumber.isNotEmpty ? '$version+$buildNumber' : version;
+      return _cachedAppVersion!;
+    } catch (e) {
+      debugPrint('TelemetryService package_info_plus hatası: $e');
+      return _cachedAppVersion ?? '';
+    }
+  }
+
+  /// Senkron erişim veya geriye dönük uyumluluk için getter
+  static String get appVersion => _cachedAppVersion ?? '';
 
   static final http.Client _client = http.Client();
   static String? _cachedUid;
@@ -89,11 +111,7 @@ class TelemetryService {
   /// Uygulama açılışında arka planda çağrılacak telemetri metodu
   static Future<void> init() async {
     try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      final build = packageInfo.buildNumber;
-      appVersion = build.isNotEmpty
-          ? '${packageInfo.version}+$build'
-          : packageInfo.version;
+      await getAppVersion();
     } catch (e) {
       debugPrint('TelemetryService sürüm bilgisi alınamadı: $e');
     }
@@ -115,11 +133,12 @@ class TelemetryService {
       if (!_isTelemetryAllowed()) return;
 
       final effectiveUid = await getEffectiveUid();
+      final effectiveAppVersion = await getAppVersion();
 
       final bodyData = {
         'uid': effectiveUid,
         'app': 'okey_defteri',
-        'app_version': appVersion,
+        'app_version': effectiveAppVersion,
         'is_debug': kDebugMode,
         'event': eventName,
         'platform': platformName,
@@ -159,11 +178,12 @@ class TelemetryService {
       if (!_isTelemetryAllowed()) return;
 
       final effectiveUid = await getEffectiveUid();
+      final effectiveAppVersion = await getAppVersion();
 
       final bodyData = {
         'uid': effectiveUid,
         'app': 'okey_defteri',
-        'app_version': appVersion,
+        'app_version': effectiveAppVersion,
         'is_debug': kDebugMode,
         'event': event,
         'platform': platformName,
