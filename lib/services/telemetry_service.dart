@@ -10,32 +10,8 @@ import 'auth_service.dart';
 class TelemetryService {
   static const String _uidKey = 'app_unique_id';
   static const String _logApiUrl = 'https://keremkuyucu.com.tr/api/logs';
-  static const String _errorLogApiUrl = 'https://keremkuyucu.com.tr/api/error-logs';
+  static const String _errorLogApiUrl ='https://keremkuyucu.com.tr/api/error-logs';
   static const Duration _requestTimeout = Duration(seconds: 5);
-  static String? _cachedAppVersion;
-
-  /// package_info_plus üzerinden versiyon bilgisini (örn. '1.1.0+24') alır ve önbelleğe alır.
-  static Future<String> getAppVersion() async {
-    if (_cachedAppVersion != null && _cachedAppVersion!.isNotEmpty) {
-      return _cachedAppVersion!;
-    }
-
-    try {
-      final info = await PackageInfo.fromPlatform();
-      final version = info.version;
-      final buildNumber = info.buildNumber;
-      _cachedAppVersion =
-          buildNumber.isNotEmpty ? '$version+$buildNumber' : version;
-      return _cachedAppVersion!;
-    } catch (e) {
-      debugPrint('TelemetryService package_info_plus hatası: $e');
-      return _cachedAppVersion ?? '';
-    }
-  }
-
-  /// Senkron erişim veya geriye dönük uyumluluk için getter
-  static String get appVersion => _cachedAppVersion ?? '';
-
   static final http.Client _client = http.Client();
   static String? _cachedUid;
   static bool _isSendingError = false;
@@ -48,10 +24,6 @@ class TelemetryService {
     return '${str.substring(0, maxLength)}\n...[truncated]';
   }
 
-  /// Aktif UID'yi döndürür:
-  /// 1. Supabase'e giriş yapılmışsa doğrudan Supabase kullanıcı UID'si
-  /// 2. Giriş yapılmamışsa SharedPreferences'taki kalıcı cihaz ID'si
-  /// Bellekte önbelleğe alınarak her log çağrısında disk I/O yapılmasını engeller.
   static Future<String> getEffectiveUid() async {
     try {
       final supabaseUid = AuthService.currentUserId;
@@ -76,6 +48,18 @@ class TelemetryService {
       return localUid;
     } catch (_) {
       return 'anonymous_fallback_uid';
+    }
+  }
+
+  static Future<String> getAppVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final version = info.version;
+      final buildNumber = info.buildNumber;
+      return buildNumber.isNotEmpty ? '$version+$buildNumber' : version;
+    } catch (e) {
+      debugPrint('TelemetryService package_info_plus hatası: $e');
+      return '';
     }
   }
 
@@ -110,12 +94,6 @@ class TelemetryService {
 
   /// Uygulama açılışında arka planda çağrılacak telemetri metodu
   static Future<void> init() async {
-    try {
-      await getAppVersion();
-    } catch (e) {
-      debugPrint('TelemetryService sürüm bilgisi alınamadı: $e');
-    }
-
     try {
       if (!_isTelemetryAllowed()) return;
       await sendEvent('app_opened');
@@ -155,9 +133,13 @@ class TelemetryService {
           .timeout(_requestTimeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint('✅ Telemetri başarıyla gönderildi: $eventName ($effectiveUid)');
+        debugPrint(
+          '✅ Telemetri başarıyla gönderildi: $eventName ($effectiveUid)',
+        );
       } else {
-        debugPrint('⚠️ Telemetri gönderilemedi. Status: ${response.statusCode}');
+        debugPrint(
+          '⚠️ Telemetri gönderilemedi. Status: ${response.statusCode}',
+        );
       }
     } catch (e) {
       debugPrint('Telemetri gönderim hatası: $e');
