@@ -5,14 +5,14 @@ import 'localization_service.dart';
 class AuthService {
   static final SupabaseClient _supabase = Supabase.instance.client;
 
-  /// Web: localhost (debug/dev) veya okey.keremkk.com.tr (production)
+  /// Web: localhost (debug/dev) veya okey.keremkuyucu.com.tr (production)
   /// Mobile: com.keremkuyucu.okeydefteri deep link scheme
   static String get redirectUrl {
     if (kIsWeb) {
       if (kDebugMode || Uri.base.host.contains('localhost')) {
         return 'http://localhost:3000/';
       }
-      return 'https://okey.keremkk.com.tr/';
+      return 'https://okey.keremkuyucu.com.tr/';
     }
     return 'com.keremkuyucu.okeydefteri://login-callback/';
   }

@@ -8,8 +8,8 @@ import 'auth_service.dart';
 
 class TelemetryService {
   static const String _uidKey = 'app_unique_id';
-  static const String _logApiUrl = 'https://keremkk.com.tr/api/logs';
-  static const String _errorLogApiUrl = 'https://keremkk.com.tr/api/error-logs';
+  static const String _logApiUrl = 'https://keremkuyucu.com.tr/api/logs';
+  static const String _errorLogApiUrl = 'https://keremkuyucu.com.tr/api/error-logs';
   static const Duration _requestTimeout = Duration(seconds: 5);
   static const String appVersion = '1.0.19+23';
 
@@ -134,7 +134,7 @@ class TelemetryService {
     }
   }
 
-  /// Hata kayıtlarını 'https://keremkk.com.tr/api/error-logs' uç noktasına gönderir.
+  /// Hata kayıtlarını 'https://keremkuyucu.com.tr/api/error-logs' uç noktasına gönderir.
   static Future<void> sendError({
     required String event,
     required String message,

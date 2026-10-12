@@ -73,8 +73,8 @@ class DeveloperInfo {
                 _buildInfoTile(
                   icon: Icons.email_outlined,
                   title: Localization.t('about.contact'),
-                  subtitle: 'contact@keremkk.com.tr',
-                  url: 'mailto:contact@keremkk.com.tr',
+                  subtitle: 'contact@keremkuyucu.com.tr',
+                  url: 'mailto:contact@keremkuyucu.com.tr',
                 ),
                 const Divider(height: 24, color: AppTheme.textMuted),
                 // Uygulama Açıklaması
