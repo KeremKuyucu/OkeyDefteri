@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 import 'settings_service.dart';
 import 'auth_service.dart';
 
@@ -11,7 +12,7 @@ class TelemetryService {
   static const String _logApiUrl = 'https://keremkuyucu.com.tr/api/logs';
   static const String _errorLogApiUrl = 'https://keremkuyucu.com.tr/api/error-logs';
   static const Duration _requestTimeout = Duration(seconds: 5);
-  static const String appVersion = '1.0.19+23';
+  static String appVersion = '1.1.0+24';
 
   static final http.Client _client = http.Client();
   static String? _cachedUid;
@@ -87,6 +88,16 @@ class TelemetryService {
 
   /// Uygulama açılışında arka planda çağrılacak telemetri metodu
   static Future<void> init() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      final build = packageInfo.buildNumber;
+      appVersion = build.isNotEmpty
+          ? '${packageInfo.version}+$build'
+          : packageInfo.version;
+    } catch (e) {
+      debugPrint('TelemetryService sürüm bilgisi alınamadı: $e');
+    }
+
     try {
       if (!_isTelemetryAllowed()) return;
       await sendEvent('app_opened');
