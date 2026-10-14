@@ -13,7 +13,6 @@ class TelemetryService {
   static const String _errorLogApiUrl ='https://keremkuyucu.com.tr/api/error-logs';
   static const Duration _requestTimeout = Duration(seconds: 5);
   static final http.Client _client = http.Client();
-  static String? _cachedUid;
   static bool _isSendingError = false;
 
   /// Güvenli metin kırpıcı (Backend payload limitlerine uyum sağlar)
@@ -28,14 +27,11 @@ class TelemetryService {
     try {
       final supabaseUid = AuthService.currentUserId;
       if (supabaseUid != null && supabaseUid.isNotEmpty) {
-        _cachedUid = supabaseUid;
         return supabaseUid;
       }
     } catch (e) {
       debugPrint('TelemetryService Supabase UID alınamadı: $e');
     }
-
-    if (_cachedUid != null) return _cachedUid!;
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -44,7 +40,6 @@ class TelemetryService {
         localUid = const Uuid().v4();
         await prefs.setString(_uidKey, localUid);
       }
-      _cachedUid = localUid;
       return localUid;
     } catch (_) {
       return 'anonymous_fallback_uid';
@@ -120,7 +115,6 @@ class TelemetryService {
         'is_debug': kDebugMode,
         'event': eventName,
         'platform': platformName,
-        'timestamp': DateTime.now().toUtc().toIso8601String(),
         'metadata': additionalData ?? {},
       };
 
@@ -172,7 +166,6 @@ class TelemetryService {
         'message': _sanitize(message, maxLength: 3000) ?? message,
         if (stackTrace != null)
           'stackTrace': _sanitize(stackTrace, maxLength: 5000),
-        'timestamp': DateTime.now().toUtc().toIso8601String(),
         'metadata': metadata ?? {},
       };
 
