@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Okey Defteri Release Notes Generator
+Okey Defteri Release Notes Generator (CI / GitHub Actions)
 Generates RELEASE_<version>.md (GitHub) and RELEASE_PLAY_STORE_<version>.md (Play Store)
-using Google Gemini API with fallback to Antigravity CLI (agy).
+using Google Gemini API.
 """
 
 import argparse
@@ -116,17 +116,11 @@ def _sanitize_key(raw: str) -> str:
     return raw.strip().lstrip("\ufeff").strip()
 
 def find_gemini_api_key(explicit_key: str = None) -> str:
+    """Finds Gemini API key from explicit argument or environment variable."""
     if explicit_key:
         return _sanitize_key(explicit_key)
     if os.environ.get("GEMINI_API_KEY"):
         return _sanitize_key(os.environ["GEMINI_API_KEY"])
-
-    home_key = Path.home() / ".gemini" / "api.key"
-    if home_key.exists():
-        key = _sanitize_key(home_key.read_text(encoding="utf-8-sig"))
-        if key:
-            return key
-
     return ""
 
 def load_templates() -> tuple[str, str]:
@@ -242,29 +236,6 @@ Respond ONLY with a valid JSON object with exactly two keys:
 
     raise RuntimeError(f"Gemini API request failed on all models: {last_error}")
 
-def generate_with_agy(version: str) -> tuple[str, str]:
-    print(f"[*] Calling Antigravity CLI (agy) to generate release notes for v{version}...")
-    agy_prompt = (
-        f"Okey Defteri projesinin v{version} surumu icin surum notlarini olustur. "
-        "1. Git commit loglarini ve son degisiklikleri incele. "
-        f"2. .github/RELEASE_TEMPLATE.md sablonuna birebir uyarak 'RELEASE_{version}.md' dosyasini olustur. "
-        f"3. .github/RELEASE_TEMPLATE_PLAYSTORE.md sablonuna birebir uyarak (her dil icin max 500 karakter, <en-US> ve <tr-TR> etiketleri ile) 'RELEASE_PLAY_STORE_{version}.md' dosyasini olustur. "
-        "Dosyalari dogrudan proje kok dizininde olustur."
-    )
-
-    cmd = ["agy", "-p", agy_prompt, "--add-dir", str(PROJECT_ROOT), "--dangerously-skip-permissions"]
-    res = subprocess.run(cmd, cwd=PROJECT_ROOT)
-    if res.returncode != 0:
-        raise RuntimeError(f"agy CLI exited with code {res.returncode}")
-
-    gh_file = PROJECT_ROOT / f"RELEASE_{version}.md"
-    play_file = PROJECT_ROOT / f"RELEASE_PLAY_STORE_{version}.md"
-
-    if not gh_file.exists() or not play_file.exists():
-        raise FileNotFoundError("agy completed but one or both release note files were not created.")
-
-    return gh_file.read_text(encoding="utf-8"), play_file.read_text(encoding="utf-8")
-
 def validate_play_store_notes(content: str) -> bool:
     print("\n[*] Validating Play Store character limits (Max 500 per locale):")
     locales = ["en-US", "tr-TR"]
@@ -284,52 +255,36 @@ def validate_play_store_notes(content: str) -> bool:
     return all_ok
 
 def main():
-    parser = argparse.ArgumentParser(description="Okey Defteri Release Notes Generator")
+    parser = argparse.ArgumentParser(description="Okey Defteri Release Notes Generator (Workflow / CI)")
     parser.add_argument("--version", "-v", help="Release version (default: from pubspec.yaml)")
-    parser.add_argument("--engine", "-e", choices=["gemini", "agy", "auto"], default="auto",
-                        help="Generator engine: gemini, agy, or auto (default: auto)")
-    parser.add_argument("--api-key", "-k", help="Gemini API Key (optional)")
+    parser.add_argument("--engine", "-e", default="gemini", help=argparse.SUPPRESS)
+    parser.add_argument("--api-key", "-k", help="Gemini API Key (optional, defaults to GEMINI_API_KEY env)")
     args = parser.parse_args()
 
     version = args.version or get_current_version()
     print(f"=== Okey Defteri Release Notes Generator (v{version}) ===")
+
+    api_key = find_gemini_api_key(args.api_key)
+    if not api_key:
+        print("[!] Error: No GEMINI_API_KEY found.")
+        print("    Provide it via --api-key or set the GEMINI_API_KEY environment variable/secret.")
+        sys.exit(1)
 
     last_tag, commit_log, diff_stat = get_git_context(version)
     print(f"[*] Commits to summarize:\n{commit_log}\n")
     if diff_stat:
         print(f"[*] Diff stat summary:\n{diff_stat}\n")
 
-    api_key = find_gemini_api_key(args.api_key)
-    engine = args.engine
-
-    if engine == "auto":
-        engine = "gemini" if api_key else "agy"
-
-    print(f"[*] Using engine: {engine.upper()}")
-
-    gh_notes = ""
-    play_notes = ""
-
-    if engine == "gemini":
-        if not api_key:
-            print("[!] Error: Gemini engine selected but no GEMINI_API_KEY found.")
-            print("    Provide it via --api-key or set the GEMINI_API_KEY environment variable.")
-            sys.exit(1)
-        gh_template, play_template = load_templates()
-        gh_notes, play_notes = generate_with_gemini(
-            api_key=api_key,
-            version=version,
-            last_tag=last_tag,
-            commit_log=commit_log,
-            diff_stat=diff_stat,
-            gh_template=gh_template,
-            play_template=play_template
-        )
-    elif engine == "agy":
-        gh_notes, play_notes = generate_with_agy(version)
-    else:
-        print(f"[!] Unknown engine: {engine}")
-        sys.exit(1)
+    gh_template, play_template = load_templates()
+    gh_notes, play_notes = generate_with_gemini(
+        api_key=api_key,
+        version=version,
+        last_tag=last_tag,
+        commit_log=commit_log,
+        diff_stat=diff_stat,
+        gh_template=gh_template,
+        play_template=play_template
+    )
 
     gh_file = PROJECT_ROOT / f"RELEASE_{version}.md"
     play_file = PROJECT_ROOT / f"RELEASE_PLAY_STORE_{version}.md"
