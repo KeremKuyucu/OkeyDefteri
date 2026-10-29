@@ -355,7 +355,10 @@ class _ScoreHistoryScreenState extends State<ScoreHistoryScreen> {
                         return Padding(
                           padding: const EdgeInsets.only(top: 2),
                           child: Text(
-                            '${Localization.t('history.round_caused_by')} ${causedBy.name}',
+                            Localization.t(
+                              'history.round_caused_by',
+                              args: [causedBy.name],
+                            ),
                             style: const TextStyle(
                               color: AppTheme.warningOrange,
                               fontSize: 11,
