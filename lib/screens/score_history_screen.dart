@@ -37,11 +37,11 @@ class _ScoreHistoryScreenState extends State<ScoreHistoryScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.surfaceDark,
         title: Text(
-          Localization.t('history.deleteScore'),
+          Localization.t('history.delete_score'),
           style: TextStyle(color: AppTheme.textPrimary),
         ),
         content: Text(
-          Localization.t('history.deleteScoreConfirm'),
+          Localization.t('history.delete_score_confirm'),
           style: TextStyle(color: AppTheme.textSecondary),
         ),
         actions: [
